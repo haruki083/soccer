@@ -14,7 +14,6 @@ import {
   ONLINE_SNAPSHOT_INTERVAL,
   ONLINE_TEAM_KEYS,
   ONLINE_TEAM_STORAGE_KEY,
-  PLAYER_NAME_MAX_LENGTH,
   PLAYER_NAME_STORAGE_KEY,
 } from "./src/appConfig.js";
 import {
@@ -75,6 +74,11 @@ import {
   normalize,
   randomRange,
 } from "./src/math.js";
+import {
+  cleanPlayerNameInput,
+  normalizeOnlineTeam,
+  playerNameForDisplay,
+} from "./src/playerProfile.js";
 import {
   DEFAULT_PLAYER_STATS,
   PLAYER_POINT_BUDGET,
@@ -438,16 +442,6 @@ import {
     }
   }
 
-  function cleanPlayerNameInput(value) {
-    return String(value ?? "")
-      .replace(/[\u0000-\u001f\u007f]/g, "")
-      .slice(0, PLAYER_NAME_MAX_LENGTH);
-  }
-
-  function playerNameForDisplay(value) {
-    return cleanPlayerNameInput(value).replace(/\s+/g, " ").trim();
-  }
-
   function initialPlayerName() {
     try {
       return cleanPlayerNameInput(localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "");
@@ -462,10 +456,6 @@ import {
     } catch {
       // Name changes still apply for the current session.
     }
-  }
-
-  function normalizeOnlineTeam(value) {
-    return value === "away" ? "away" : "home";
   }
 
   function initialOnlineTeam() {
@@ -2698,14 +2688,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitmath-final");
+    current.searchParams.set("v", "splitprofile-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitmath-final");
+    current.searchParams.set("v", "splitprofile-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2716,7 +2706,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitmath-final");
+    current.searchParams.set("v", "splitprofile-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
