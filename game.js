@@ -68,6 +68,14 @@ import {
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
 import {
+  clamp,
+  distance,
+  finiteOr,
+  lerp,
+  normalize,
+  randomRange,
+} from "./src/math.js";
+import {
   DEFAULT_PLAYER_STATS,
   PLAYER_POINT_BUDGET,
   PLAYER_STAT_KEYS,
@@ -1079,28 +1087,6 @@ import {
   let rockets = [];
   let impactEffects = [];
 
-  function clamp(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-  }
-
-  function finiteOr(value, fallback) {
-    const number = Number(value);
-    return Number.isFinite(number) ? number : fallback;
-  }
-
-  function lerp(a, b, t) {
-    return a + (b - a) * t;
-  }
-
-  function distance(a, b) {
-    return Math.hypot(a.x - b.x, a.y - b.y);
-  }
-
-  function normalize(x, y) {
-    const len = Math.hypot(x, y) || 1;
-    return { x: x / len, y: y / len, len };
-  }
-
   function makeClientId() {
     if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
     return `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
@@ -1214,10 +1200,6 @@ import {
 
   function roleStats(role) {
     return { ...ROLE_STATS[role] };
-  }
-
-  function randomRange(min, max) {
-    return min + Math.random() * (max - min);
   }
 
   function createEnemyAiProfile(slot, role) {
@@ -2716,14 +2698,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "spliti18n-final");
+    current.searchParams.set("v", "splitmath-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "spliti18n-final");
+    current.searchParams.set("v", "splitmath-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2734,7 +2716,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "spliti18n-final");
+    current.searchParams.set("v", "splitmath-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
