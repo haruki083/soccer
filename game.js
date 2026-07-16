@@ -1,19 +1,12 @@
 import * as THREE from "./vendor/three.module.js";
 import {
-  BUILD_STORAGE_KEY,
-  CONTROLS_STORAGE_KEY,
   DEFAULT_LANGUAGE,
   DEFAULT_MATCH_RULE,
-  KIT_STORAGE_KEY,
-  LANGUAGE_STORAGE_KEY,
   MATCH_RULES,
-  MATCH_RULE_STORAGE_KEY,
   ONLINE_INPUT_INTERVAL,
   ONLINE_ROOM_PARAM,
   ONLINE_SNAPSHOT_INTERVAL,
   ONLINE_TEAM_KEYS,
-  ONLINE_TEAM_STORAGE_KEY,
-  PLAYER_NAME_STORAGE_KEY,
 } from "./src/appConfig.js";
 import {
   aiMovementProfile,
@@ -55,7 +48,6 @@ import {
   DEFAULT_CONTROL_BINDINGS,
   isTextEditingTarget,
   keyLabel,
-  normalizeControlBindings,
   normalizeKeyName,
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
@@ -137,6 +129,23 @@ import {
   speedBoostMultiplier,
   speedDriveFromStat,
 } from "./src/stats.js";
+import {
+  initialControlBindings,
+  initialKit,
+  initialLanguage,
+  initialMatchRule,
+  initialOnlineTeam,
+  initialPlayerName,
+  initialPlayerStats,
+  initialTeamSettings,
+  saveControlBindings as persistControlBindings,
+  saveKit as persistKit,
+  saveLanguage,
+  saveMatchRule as persistMatchRule,
+  saveOnlineTeam as persistOnlineTeam,
+  savePlayerName as persistPlayerName,
+  savePlayerStats as persistPlayerStats,
+} from "./src/storage.js";
 import {
   defaultTeamSetting,
   normalizeKitId,
@@ -462,62 +471,16 @@ import {
     geometries: {},
   };
 
-  function initialLanguage() {
-    try {
-      const saved = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (I18N[saved]) return saved;
-    } catch {
-      // Local storage can be unavailable in private or file contexts.
-    }
-    return DEFAULT_LANGUAGE;
-  }
-
-  function initialPlayerStats() {
-    try {
-      return normalizePlayerStats(JSON.parse(localStorage.getItem(BUILD_STORAGE_KEY)));
-    } catch {
-      return { ...DEFAULT_PLAYER_STATS };
-    }
-  }
-
   function savePlayerStats() {
-    try {
-      localStorage.setItem(BUILD_STORAGE_KEY, JSON.stringify(state.playerStats));
-    } catch {
-      // Build changes still apply for the current session.
-    }
-  }
-
-  function initialPlayerName() {
-    try {
-      return cleanPlayerNameInput(localStorage.getItem(PLAYER_NAME_STORAGE_KEY) || "");
-    } catch {
-      return "";
-    }
+    persistPlayerStats(state.playerStats);
   }
 
   function savePlayerName() {
-    try {
-      localStorage.setItem(PLAYER_NAME_STORAGE_KEY, state.playerName);
-    } catch {
-      // Name changes still apply for the current session.
-    }
-  }
-
-  function initialOnlineTeam() {
-    try {
-      return normalizeOnlineTeam(localStorage.getItem(ONLINE_TEAM_STORAGE_KEY));
-    } catch {
-      return "home";
-    }
+    persistPlayerName(state.playerName);
   }
 
   function saveOnlineTeam() {
-    try {
-      localStorage.setItem(ONLINE_TEAM_STORAGE_KEY, state.onlineTeamPreference);
-    } catch {
-      // Team choice still applies for the current session.
-    }
+    persistOnlineTeam(state.onlineTeamPreference);
   }
 
   function tr(path) {
@@ -556,40 +519,12 @@ import {
     return getSelectedMatchRule(MATCH_RULES, DEFAULT_MATCH_RULE, ruleId);
   }
 
-  function initialMatchRule() {
-    try {
-      const saved = localStorage.getItem(MATCH_RULE_STORAGE_KEY);
-      if (MATCH_RULES[saved]) return saved;
-    } catch {
-      // Match rule choice still has a default for the current session.
-    }
-    return DEFAULT_MATCH_RULE;
-  }
-
   function saveMatchRule() {
-    try {
-      localStorage.setItem(MATCH_RULE_STORAGE_KEY, state.matchRule);
-    } catch {
-      // Match rule changes still apply for the current session.
-    }
-  }
-
-  function initialKit() {
-    try {
-      const saved = localStorage.getItem(KIT_STORAGE_KEY);
-      if (KIT_STYLES[saved]) return saved;
-    } catch {
-      // Kit choice still has a default for the current session.
-    }
-    return DEFAULT_KIT;
+    persistMatchRule(state.matchRule);
   }
 
   function saveKit() {
-    try {
-      localStorage.setItem(KIT_STORAGE_KEY, state.kit);
-    } catch {
-      // Kit changes still apply for the current session.
-    }
+    persistKit(state.kit);
   }
 
   function selectedKitStyle(kitId = state.kit) {
@@ -599,13 +534,6 @@ import {
   function playerKitStyle(player) {
     if (player.teamKey === "away" && player.kitId === "away") return AWAY_KIT_STYLE;
     return selectedKitStyle(player.kitId || teamKitId(player.teamKey));
-  }
-
-  function initialTeamSettings() {
-    return normalizeTeamSettings({
-      home: { tactic: "balanced", kit: initialKit() },
-      away: defaultTeamSetting("away"),
-    });
   }
 
   function playerEvent(player, eventKey) {
@@ -649,20 +577,8 @@ import {
 
   let pendingControlAction = null;
 
-  function initialControlBindings() {
-    try {
-      return normalizeControlBindings(JSON.parse(localStorage.getItem(CONTROLS_STORAGE_KEY)));
-    } catch {
-      return { ...DEFAULT_CONTROL_BINDINGS };
-    }
-  }
-
   function saveControlBindings() {
-    try {
-      localStorage.setItem(CONTROLS_STORAGE_KEY, JSON.stringify(state.controlBindings));
-    } catch {
-      // Control changes still apply for the current session.
-    }
+    persistControlBindings(state.controlBindings);
   }
 
   function isActionKey(actionId, key) {
@@ -980,7 +896,7 @@ import {
     playerStats: initialPlayerStats(),
     controlBindings: initialControlBindings(),
     tactic: "balanced",
-    matchRule: initialMatchRule(),
+    matchRule: initialMatchRule(MATCH_RULES),
     kit: initialKit(),
     teamSettings: initialTeamSettings(),
   };
@@ -4536,11 +4452,7 @@ import {
     const button = event.target.closest("button[data-language]");
     if (!button || !I18N[button.dataset.language]) return;
     state.language = button.dataset.language;
-    try {
-      localStorage.setItem(LANGUAGE_STORAGE_KEY, state.language);
-    } catch {
-      // Language still changes for the current session.
-    }
+    saveLanguage(state.language);
     applyLanguage();
     sendOnlineProfile(true);
   });
