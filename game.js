@@ -65,6 +65,13 @@ import {
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
 import {
+  ballEdgeInward,
+  ballRescueTarget,
+  clampBallXForY,
+  crossingYAtX,
+  isGoalMouthY,
+} from "./src/fieldGeometry.js";
+import {
   clamp,
   distance,
   finiteOr,
@@ -1057,63 +1064,18 @@ import {
   let rockets = [];
   let impactEffects = [];
 
-  function isGoalMouthY(y) {
-    return y >= FIELD.goalTop && y <= FIELD.goalBottom;
-  }
-
-  function crossingYAtX(prevX, prevY, lineX) {
-    const dx = ball.x - prevX;
-    if (Math.abs(dx) < 0.0001) return ball.y;
-    const t = clamp((lineX - prevX) / dx, 0, 1);
-    return lerp(prevY, ball.y, t);
-  }
-
   function checkGoalCrossing(prevX = ball.x, prevY = ball.y) {
-    if (ball.x <= 0 && isGoalMouthY(crossingYAtX(prevX, prevY, 0))) {
+    if (ball.x <= 0 && isGoalMouthY(FIELD, crossingYAtX(ball, prevX, prevY, 0))) {
       scoreGoal("away");
       return true;
     }
 
-    if (ball.x >= FIELD.width && isGoalMouthY(crossingYAtX(prevX, prevY, FIELD.width))) {
+    if (ball.x >= FIELD.width && isGoalMouthY(FIELD, crossingYAtX(ball, prevX, prevY, FIELD.width))) {
       scoreGoal("home");
       return true;
     }
 
     return false;
-  }
-
-  function clampBallXForY(x, y) {
-    if (isGoalMouthY(y)) {
-      return clamp(x, -FIELD.goalDepth, FIELD.width + FIELD.goalDepth);
-    }
-    return clamp(x, ball.radius, FIELD.width - ball.radius);
-  }
-
-  function ballEdgeInward(margin = 58) {
-    let x = 0;
-    let y = 0;
-
-    if (!isGoalMouthY(ball.y)) {
-      if (ball.x < margin) x += (margin - ball.x) / margin;
-      if (ball.x > FIELD.width - margin) x -= (ball.x - (FIELD.width - margin)) / margin;
-    }
-    if (ball.y < margin) y += (margin - ball.y) / margin;
-    if (ball.y > FIELD.height - margin) y -= (ball.y - (FIELD.height - margin)) / margin;
-
-    const len = Math.hypot(x, y);
-    if (!len) return { x: 0, y: 0, len: 0 };
-    return { x: x / len, y: y / len, len };
-  }
-
-  function ballRescueTarget(player) {
-    const edge = ballEdgeInward();
-    if (!edge.len) return null;
-    const offset = clamp(player.radius * 0.56 + ball.radius + 3, 14, player.radius + ball.radius - 3);
-    return {
-      x: clamp(ball.x + edge.x * offset, 24, FIELD.width - 24),
-      y: clamp(ball.y + edge.y * offset, 28, FIELD.height - 28),
-      edge,
-    };
   }
 
   function cameraForward2d() {
@@ -1823,7 +1785,7 @@ import {
       ball.vx = aim.x * force + player.vx * 0.28;
       ball.vy = aim.y * force + player.vy * 0.28;
       const pushedY = clamp(ball.y + aim.y * 14, ball.radius, FIELD.height - ball.radius);
-      ball.x = clampBallXForY(ball.x + aim.x * 14, pushedY);
+      ball.x = clampBallXForY(FIELD, ball.radius, ball.x + aim.x * 14, pushedY);
       ball.y = pushedY;
       ball.lastTouch = player.teamKey;
       if (visibleAction) logEvent(() => tr("event.ballBlast"));
@@ -2067,7 +2029,7 @@ import {
     const ai = aiMovementProfile(player);
     const attacking = ball.lastTouch === player.teamKey || side * ball.vx > 36;
     const leadTime = clamp(distance(player, ball) / 360, 0.24, 1.15);
-    const edge = ballEdgeInward(76);
+    const edge = ballEdgeInward(FIELD, ball, 76);
     let projectedX = ball.x + ball.vx * leadTime;
     let projectedY = ball.y + ball.vy * leadTime;
     if (edge.len) {
@@ -2119,7 +2081,7 @@ import {
       const chasers = closestAiFieldPlayers(player.teamKey, ball, chaseCount);
       const chaseRank = chasers.indexOf(player);
       if (chaseRank === 0) {
-        const rescueTarget = ballRescueTarget(player);
+        const rescueTarget = ballRescueTarget(FIELD, ball, player);
         if (rescueTarget) {
           moveToward(player, rescueTarget.x, rescueTarget.y, dt, clamp((1.04 + plan.press * 0.06 + behavior.chaseUrgency + ai.chaseUrgency) * ai.urgency, 0.58, 1.36));
           return;
@@ -2229,13 +2191,13 @@ import {
       ball.vy *= -0.5;
     }
 
-    const nextX = clampBallXForY(ball.x, ball.y);
+    const nextX = clampBallXForY(FIELD, ball.radius, ball.x, ball.y);
     if (ball.x !== nextX) {
       ball.x = nextX;
       ball.vx *= -0.44;
     }
 
-    const edge = ballEdgeInward(18);
+    const edge = ballEdgeInward(FIELD, ball, 18);
     if (edge.len && Math.hypot(ball.vx, ball.vy) < 24) {
       ball.vx += edge.x * 18 * dt;
       ball.vy += edge.y * 18 * dt;
@@ -2255,9 +2217,9 @@ import {
       const ny = dy / d;
       const overlap = min - d;
       const pushedY = clamp(ball.y + ny * (overlap + 0.8), ball.radius, FIELD.height - ball.radius);
-      ball.x = clampBallXForY(ball.x + nx * (overlap + 0.8), pushedY);
+      ball.x = clampBallXForY(FIELD, ball.radius, ball.x + nx * (overlap + 0.8), pushedY);
       ball.y = pushedY;
-      const edge = ballEdgeInward(44);
+      const edge = ballEdgeInward(FIELD, ball, 44);
       let impulseX = nx;
       let impulseY = ny;
       if (edge.len) {
@@ -2268,7 +2230,7 @@ import {
           impulseY = impulse.y;
           const slide = Math.min(4, overlap * 0.35 + 0.6);
           const slidY = clamp(ball.y + edge.y * slide, ball.radius, FIELD.height - ball.radius);
-          ball.x = clampBallXForY(ball.x + edge.x * slide, slidY);
+          ball.x = clampBallXForY(FIELD, ball.radius, ball.x + edge.x * slide, slidY);
           ball.y = slidY;
         }
       }
@@ -2634,14 +2596,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitonlineroom-final");
+    current.searchParams.set("v", "splitfield-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitonlineroom-final");
+    current.searchParams.set("v", "splitfield-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2652,7 +2614,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitonlineroom-final");
+    current.searchParams.set("v", "splitfield-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
