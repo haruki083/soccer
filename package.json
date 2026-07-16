@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "dev": "node server.mjs --port 4210",
-    "check": "node --check game.js && node --check server.mjs && node --check src/stats.js"
+    "check": "node --check game.js && node --check server.mjs && node --check src/stats.js && node --check src/config.js"
   },
   "engines": {
     "node": ">=20"
