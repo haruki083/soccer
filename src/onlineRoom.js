@@ -36,3 +36,11 @@ export function sanitizeRoomCode(value) {
     .replace(/[^A-Z0-9-]/g, "")
     .slice(0, 16);
 }
+
+export function onlineSlotIndex(teamKey, slot) {
+  return (teamKey === "away" ? 4 : 0) + slot;
+}
+
+export function onlineSlotLabel(teamKey, slot) {
+  return `${teamKey === "home" ? "HOME" : "AWAY"}-${slot + 1}`;
+}

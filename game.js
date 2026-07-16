@@ -30,24 +30,17 @@ import {
   ITEM_TYPES,
   KIT_STYLES,
   PITCH_MARKINGS,
-  PLAYER_RADIUS_BASE,
-  PLAYER_RADIUS_PHYSICAL_SCALE,
   PLAYER_VISUAL_SCALE,
   ROCKET_BALL_FORCE,
   ROCKET_CARRIER_BALL_FORCE,
   ROCKET_PLAYER_KNOCKBACK,
   ROCKET_SPEED,
-  ROCKET_STUN_MAX,
-  ROCKET_STUN_MIN,
   ROCKET_TTL,
-  ROLE_VISUALS,
   SHOCKWAVE_BALL_CLOSE_BONUS,
   SHOCKWAVE_BALL_FORCE,
   SHOCKWAVE_PLAYER_CLOSE_BONUS,
   SHOCKWAVE_PLAYER_FORCE,
   SHOCKWAVE_RADIUS,
-  SHOCKWAVE_STUN_MAX,
-  SHOCKWAVE_STUN_MIN,
   SKIN_ACCENTS,
   SKIN_STYLES,
   SLIDE_COOLDOWN,
@@ -66,6 +59,21 @@ import {
   normalizeKeyName,
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
+import {
+  heldItemLabel as formatHeldItemLabel,
+  itemCharges as getItemCharges,
+  itemIcon as getItemIcon,
+  itemName as getItemName,
+  kitLabel as getKitLabel,
+  matchRuleLabel as getMatchRuleLabel,
+  tacticLabel as getTacticLabel,
+  translate,
+} from "./src/labels.js";
+import {
+  isTimedMatch as isTimedMatchRule,
+  selectedMatchRule as getSelectedMatchRule,
+  targetGoals as targetGoalsForRule,
+} from "./src/matchRules.js";
 import {
   ballEdgeInward,
   ballRescueTarget,
@@ -87,9 +95,19 @@ import {
 } from "./src/playerProfile.js";
 import {
   initialOnlineClientId,
+  onlineSlotIndex,
+  onlineSlotLabel,
   readRoomCodeFromUrl,
   sanitizeRoomCode,
 } from "./src/onlineRoom.js";
+import {
+  playerRadiusFromStats,
+  rocketStunDuration,
+  roleColor,
+  roleVisual,
+  shockwaveStunDuration,
+  tacticalRoleFor,
+} from "./src/playerModel.js";
 import {
   DEFAULT_PLAYER_STATS,
   PLAYER_POINT_BUDGET,
@@ -492,43 +510,39 @@ import {
   }
 
   function tr(path) {
-    const read = (language) =>
-      path.split(".").reduce((value, key) => (value && value[key] !== undefined ? value[key] : undefined), I18N[language]);
-    return read(state.language) ?? read(DEFAULT_LANGUAGE) ?? path;
+    return translate(I18N, state.language, DEFAULT_LANGUAGE, path);
   }
 
   function itemName(type) {
-    return tr(`items.${type}`);
+    return getItemName(tr, type);
   }
 
   function itemIcon(type) {
-    return tr(`itemIcons.${type}`);
+    return getItemIcon(tr, type);
   }
 
   function itemCharges(type) {
-    return Math.max(1, ITEM_TYPES[type]?.charges || 1);
+    return getItemCharges(ITEM_TYPES, type);
   }
 
   function heldItemLabel(player) {
-    if (!player?.heldItem) return tr("ui.empty");
-    const charges = player.heldItemCharges || itemCharges(player.heldItem);
-    return charges > 1 ? `${itemName(player.heldItem)} x${charges}` : itemName(player.heldItem);
+    return formatHeldItemLabel(tr, ITEM_TYPES, player);
   }
 
   function tacticLabel(tacticId) {
-    return tr(`tactics.${tacticId}`);
+    return getTacticLabel(tr, tacticId);
   }
 
   function matchRuleLabel(ruleId) {
-    return tr(`matchRules.${ruleId}`);
+    return getMatchRuleLabel(tr, ruleId);
   }
 
   function kitLabel(kitId) {
-    return tr(`kits.${kitId}`);
+    return getKitLabel(tr, kitId);
   }
 
   function selectedMatchRule(ruleId = state.matchRule) {
-    return MATCH_RULES[ruleId] || MATCH_RULES[DEFAULT_MATCH_RULE];
+    return getSelectedMatchRule(MATCH_RULES, DEFAULT_MATCH_RULE, ruleId);
   }
 
   function initialMatchRule() {
@@ -705,42 +719,12 @@ import {
     return calculatePlayerRole(stats);
   }
 
-  function tacticalRoleFor(role) {
-    return role === "MD" ? "CM" : role;
-  }
-
-  function roleVisual(role) {
-    return ROLE_VISUALS[tacticalRoleFor(role)] || ROLE_VISUALS.CM;
-  }
-
-  function roleColor(role) {
-    return roleVisual(role).color;
-  }
-
   function playerColor(role = playerRole()) {
     return roleColor(role);
   }
 
   function playerStatsFromBuild() {
     return playerStatsFromPointBuild(state.playerStats);
-  }
-
-  function playerRadiusFromStats(stats, role) {
-    const roleBonus = role === "GK" ? 2.1 : role === "DF" ? 1.4 : role === "FW" ? -0.2 : 0.35;
-    const physicalDrive = Math.pow(clamp(stats.physical, 0, 1), 1.12);
-    return PLAYER_RADIUS_BASE + physicalDrive * PLAYER_RADIUS_PHYSICAL_SCALE + roleBonus;
-  }
-
-  function rocketStunDuration(player) {
-    const physical = clamp(player?.stats?.physical ?? 0.5, 0, 1);
-    const resistance = Math.pow(physical, 0.85);
-    return ROCKET_STUN_MIN + (1 - resistance) * (ROCKET_STUN_MAX - ROCKET_STUN_MIN);
-  }
-
-  function shockwaveStunDuration(player) {
-    const physical = clamp(player?.stats?.physical ?? 0.5, 0, 1);
-    const resistance = Math.pow(physical, 0.75);
-    return SHOCKWAVE_STUN_MIN + (1 - resistance) * (SHOCKWAVE_STUN_MAX - SHOCKWAVE_STUN_MIN);
   }
 
   function skinIndexFromBuild() {
@@ -778,14 +762,6 @@ import {
       kit: settings.kit,
       language: state.language,
     };
-  }
-
-  function onlineSlotIndex(teamKey, slot) {
-    return (teamKey === "away" ? 4 : 0) + slot;
-  }
-
-  function onlineSlotLabel(teamKey, slot) {
-    return `${teamKey === "home" ? "HOME" : "AWAY"}-${slot + 1}`;
   }
 
   function onlineSlotFor(teamKey, slot) {
@@ -979,12 +955,11 @@ import {
   }
 
   function isTimedMatch() {
-    return selectedMatchRule().type === "time";
+    return isTimedMatchRule(selectedMatchRule());
   }
 
   function targetGoals() {
-    const rule = selectedMatchRule();
-    return rule.type === "firstTo" ? rule.goals : null;
+    return targetGoalsForRule(selectedMatchRule());
   }
 
   const state = {
@@ -2553,14 +2528,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitai-final");
+    current.searchParams.set("v", "splitcorehelpers-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitai-final");
+    current.searchParams.set("v", "splitcorehelpers-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2571,7 +2546,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitai-final");
+    current.searchParams.set("v", "splitcorehelpers-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
