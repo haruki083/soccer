@@ -1,5 +1,23 @@
 import * as THREE from "./vendor/three.module.js";
 import {
+  BUILD_STORAGE_KEY,
+  CONTROLS_STORAGE_KEY,
+  DEFAULT_LANGUAGE,
+  DEFAULT_MATCH_RULE,
+  KIT_STORAGE_KEY,
+  LANGUAGE_STORAGE_KEY,
+  MATCH_RULES,
+  MATCH_RULE_STORAGE_KEY,
+  ONLINE_CLIENT_STORAGE_KEY,
+  ONLINE_INPUT_INTERVAL,
+  ONLINE_ROOM_PARAM,
+  ONLINE_SNAPSHOT_INTERVAL,
+  ONLINE_TEAM_KEYS,
+  ONLINE_TEAM_STORAGE_KEY,
+  PLAYER_NAME_MAX_LENGTH,
+  PLAYER_NAME_STORAGE_KEY,
+} from "./src/appConfig.js";
+import {
   AWAY_KIT_STYLE,
   DEFAULT_AI_MOVEMENT_PROFILE,
   DEFAULT_AWAY_KIT,
@@ -383,29 +401,6 @@ import {
     effectObjects: new Map(),
     materials: new Map(),
     geometries: {},
-  };
-
-  const DEFAULT_LANGUAGE = "ja";
-  const LANGUAGE_STORAGE_KEY = "soccerLanguage";
-  const BUILD_STORAGE_KEY = "soccerPlayerBuild";
-  const PLAYER_NAME_STORAGE_KEY = "soccerOnlinePlayerName";
-  const ONLINE_TEAM_STORAGE_KEY = "soccerOnlineTeam";
-  const CONTROLS_STORAGE_KEY = "soccerControlBindings";
-  const KIT_STORAGE_KEY = "soccerKit";
-  const MATCH_RULE_STORAGE_KEY = "soccerMatchRule";
-  const ONLINE_CLIENT_STORAGE_KEY = "soccerOnlineClientId";
-  const ONLINE_ROOM_PARAM = "room";
-  const ONLINE_INPUT_INTERVAL = 1000 / 24;
-  const ONLINE_SNAPSHOT_INTERVAL = 1000 / 15;
-  const PLAYER_NAME_MAX_LENGTH = 16;
-  const ONLINE_TEAM_KEYS = ["home", "away"];
-
-  const DEFAULT_MATCH_RULE = "time3";
-  const MATCH_RULES = {
-    time3: { type: "time", seconds: 180 },
-    first3: { type: "firstTo", goals: 3 },
-    first5: { type: "firstTo", goals: 5 },
-    first7: { type: "firstTo", goals: 7 },
   };
 
   const I18N = {
@@ -3157,14 +3152,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitcontrols-final");
+    current.searchParams.set("v", "splitappconfig-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitcontrols-final");
+    current.searchParams.set("v", "splitappconfig-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -3175,7 +3170,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitcontrols-final");
+    current.searchParams.set("v", "splitappconfig-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
