@@ -644,7 +644,7 @@ import * as THREE from "./vendor/three.module.js";
         matchAnalysis: "Match analysis",
         matchSpeed: "Match speed",
         matchStatus: "Match status",
-        onlineMatch: "Link match",
+        onlineMatch: "Online match",
         onlineTeam: "Online team",
         pauseMatch: "Pause match",
         playerSetup: "Player setup",
@@ -679,7 +679,7 @@ import * as THREE from "./vendor/three.module.js";
         onlineConnecting: "CONNECTING",
         onlineGuest: "GUEST",
         onlineHost: "HOST",
-        onlineMatch: "LINK MATCH",
+        onlineMatch: "ONLINE MATCH",
         onlineOffline: "ROOM SERVER OFFLINE",
         onlinePendingBuild: "Set your build before joining.",
         onlineSolo: "SOLO",
@@ -816,7 +816,7 @@ import * as THREE from "./vendor/three.module.js";
         hostOnly: "HOST STARTS THE MATCH",
         joinedRoom: "ROOM JOINED",
         matchOn: "MATCH ON",
-        onlineOffline: "START server.mjs FOR LINK MATCH",
+        onlineOffline: "ONLINE SERVER OFFLINE",
         paused: "PAUSED",
         ready: "READY",
         roomCreated: "ROOM CREATED",
@@ -861,7 +861,7 @@ import * as THREE from "./vendor/three.module.js";
         matchAnalysis: "試合情報",
         matchSpeed: "試合速度",
         matchStatus: "試合状況",
-        onlineMatch: "リンク対戦",
+        onlineMatch: "オンライン対戦",
         onlineTeam: "オンラインチーム",
         pauseMatch: "一時停止",
         playerSetup: "プレイヤー設定",
@@ -896,7 +896,7 @@ import * as THREE from "./vendor/three.module.js";
         onlineConnecting: "接続中",
         onlineGuest: "参加中",
         onlineHost: "ホスト",
-        onlineMatch: "リンク対戦",
+        onlineMatch: "オンライン対戦",
         onlineOffline: "部屋サーバー未起動",
         onlinePendingBuild: "ビルドを決めて参加",
         onlineSolo: "ソロ",
@@ -1033,7 +1033,7 @@ import * as THREE from "./vendor/three.module.js";
         hostOnly: "試合開始はホストが行う",
         joinedRoom: "ルームに参加した",
         matchOn: "試合開始",
-        onlineOffline: "リンク対戦は server.mjs を起動してね",
+        onlineOffline: "オンライン対戦サーバー未起動",
         paused: "一時停止",
         ready: "準備OK",
         roomCreated: "ルームを作成した",
@@ -3512,14 +3512,14 @@ import * as THREE from "./vendor/three.module.js";
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "onlinebuild-final");
+    current.searchParams.set("v", "onlinewording-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "onlinebuild-final");
+    current.searchParams.set("v", "onlinewording-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -3530,7 +3530,7 @@ import * as THREE from "./vendor/three.module.js";
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "onlinebuild-final");
+    current.searchParams.set("v", "onlinewording-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
