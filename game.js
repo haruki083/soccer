@@ -16,10 +16,13 @@ import {
   PLAYER_NAME_STORAGE_KEY,
 } from "./src/appConfig.js";
 import {
+  aiMovementProfile,
+  aiRoleStats,
+  createEnemyAiProfile,
+} from "./src/aiProfiles.js";
+import {
   AWAY_KIT_STYLE,
-  DEFAULT_AI_MOVEMENT_PROFILE,
   DEFAULT_KIT,
-  ENEMY_AI_ARCHETYPES,
   FIELD,
   GOAL_FRONT_START,
   HIT_REACTION_DURATION,
@@ -37,7 +40,6 @@ import {
   ROCKET_STUN_MAX,
   ROCKET_STUN_MIN,
   ROCKET_TTL,
-  ROLE_STATS,
   ROLE_VISUALS,
   SHOCKWAVE_BALL_CLOSE_BONUS,
   SHOCKWAVE_BALL_FORCE,
@@ -77,7 +79,6 @@ import {
   finiteOr,
   lerp,
   normalize,
-  randomRange,
 } from "./src/math.js";
 import {
   cleanPlayerNameInput,
@@ -1094,50 +1095,6 @@ import {
   function resetCameraLook(player = humanPlayer()) {
     input.cameraYaw = player?.team.side === -1 ? Math.PI : 0;
     input.cameraPitch = CAMERA_DEFAULT_PITCH;
-  }
-
-  function roleStats(role) {
-    return { ...ROLE_STATS[role] };
-  }
-
-  function createEnemyAiProfile(slot, role) {
-    const archetype = ENEMY_AI_ARCHETYPES[Math.floor(Math.random() * ENEMY_AI_ARCHETYPES.length)];
-    return {
-      seed: Math.random(),
-      role,
-      statBias: {
-        speed: randomRange(-0.045, 0.045) + archetype.statBias.speed,
-        physical: randomRange(-0.055, 0.055) + archetype.statBias.physical,
-        power: randomRange(-0.045, 0.045) + archetype.statBias.power,
-      },
-      movement: {
-        urgency: clamp(archetype.movement.urgency + randomRange(-0.08, 0.08), 0.82, 1.24),
-        chaseUrgency: archetype.movement.chaseUrgency + randomRange(-0.045, 0.055),
-        pressRadius: archetype.movement.pressRadius + randomRange(-26, 34),
-        attackPush: archetype.movement.attackPush + randomRange(-18, 22),
-        defendDrop: archetype.movement.defendDrop + randomRange(-18, 24),
-        lineShift: randomRange(-28, 28),
-        shapeWidth: clamp(archetype.movement.shapeWidth + randomRange(-0.08, 0.08), 0.82, 1.22),
-        ballPull: archetype.movement.ballPull + randomRange(-0.035, 0.04),
-        laneJitter: randomRange(8, 28),
-        lanePhase: randomRange(0, Math.PI * 2) + slot * 0.7,
-        keeperDepth: randomRange(-16, 22),
-        itemUse: clamp(archetype.movement.itemUse + randomRange(-0.12, 0.14), 0.72, 1.34),
-      },
-    };
-  }
-
-  function aiMovementProfile(player) {
-    return player?.aiProfile?.movement || DEFAULT_AI_MOVEMENT_PROFILE;
-  }
-
-  function aiRoleStats(role, teamKey, profile = null) {
-    const stats = roleStats(role);
-    const boost = teamKey === "away" ? 0.02 : 0;
-    for (const key of Object.keys(stats)) {
-      stats[key] = clamp(stats[key] + boost + (profile?.statBias?.[key] || 0), 0.05, 0.98);
-    }
-    return stats;
   }
 
   function aiRoleColor(teamKey, role) {
@@ -2596,14 +2553,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitfield-final");
+    current.searchParams.set("v", "splitai-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitfield-final");
+    current.searchParams.set("v", "splitai-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2614,7 +2571,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitfield-final");
+    current.searchParams.set("v", "splitai-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
