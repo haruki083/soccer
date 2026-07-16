@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>4v4 Character Football Prototype</title>
+    <link rel="stylesheet" href="styles.css?v=onlinebuild-final">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="match-bar" aria-label="Match status" data-i18n-aria-label="aria.matchStatus">
+        <div class="team team-home">
+          <span class="crest" aria-hidden="true"></span>
+          <span>FALCONS</span>
+        </div>
+        <div class="scorebox">
+          <span id="homeScore">0</span>
+          <span class="divider">:</span>
+          <span id="awayScore">0</span>
+        </div>
+        <div class="clock">
+          <span id="matchClock">03:00</span>
+        </div>
+        <div class="play-item-pill" aria-label="Held item">
+          <span id="playHeldItemIcon">-</span>
+          <strong id="playHeldItemName">EMPTY</strong>
+        </div>
+        <div class="team team-away">
+          <span>RIVALS</span>
+          <span class="crest" aria-hidden="true"></span>
+        </div>
+        <div class="hud-actions">
+          <div class="language-switch" id="languageButtons" aria-label="Language" data-i18n-aria-label="aria.language">
+            <button class="is-active" data-language="ja" type="button">JP</button>
+            <button data-language="en" type="button">EN</button>
+          </div>
+          <button id="settingsButton" class="icon-button" aria-label="Control settings" data-i18n-aria-label="aria.controlSettings">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.6A8.4 8.4 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.6 1.5l.4 2.6h4l.4-2.6a8.4 8.4 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5z"></path>
+              <path d="M12 8.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2z"></path>
+            </svg>
+          </button>
+          <button id="playPauseButton" class="icon-button" aria-label="Start match">
+            <svg id="playPauseIcon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 5v14l11-7z"></path>
+            </svg>
+          </button>
+          <button id="speedButton" class="text-button" aria-label="Match speed" data-i18n-aria-label="aria.matchSpeed">1x</button>
+          <button id="resetButton" class="icon-button" aria-label="Reset match" data-i18n-aria-label="aria.resetMatch">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 5a7 7 0 1 1-6.3 4H3l4-4 4 4H8.1A5 5 0 1 0 12 7V5z"></path>
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <section class="match-layout">
+        <aside class="manager-panel" aria-label="Player setup" data-i18n-aria-label="aria.playerSetup">
+          <section class="lobby-card" aria-label="Lobby" data-i18n-aria-label="aria.lobby">
+            <div class="lobby-topline">
+              <span data-i18n="ui.lobby">LOBBY</span>
+              <strong id="lobbyStatus" data-i18n="ui.ready">READY</strong>
+            </div>
+            <h1 data-i18n="ui.readyRoom">READY ROOM</h1>
+            <div class="lobby-quick-grid">
+              <div>
+                <span data-i18n="ui.matchRule">RULE</span>
+                <strong id="lobbyRule">3 MIN MATCH</strong>
+              </div>
+              <div>
+                <span data-i18n="ui.role">ROLE</span>
+                <strong id="lobbyRole">FW</strong>
+              </div>
+              <div>
+                <span data-i18n="ui.tactic">TACTIC</span>
+                <strong id="lobbyTactic">BALANCED</strong>
+              </div>
+              <div>
+                <span data-i18n="ui.kit">BODY COLOR</span>
+                <strong id="lobbyBodyColor">CRIMSON</strong>
+              </div>
+            </div>
+            <button id="lobbyStartButton" class="lobby-start-button" type="button" data-i18n="ui.startMatch">START MATCH</button>
+          </section>
+
+          <section class="panel-section online-panel" aria-label="Link match" data-i18n-aria-label="aria.onlineMatch">
+            <div class="panel-heading">
+              <div class="panel-title" data-i18n="ui.onlineMatch">LINK MATCH</div>
+              <span id="onlineBadge" class="online-badge" data-i18n="ui.onlineSolo">SOLO</span>
+            </div>
+            <div class="online-status">
+              <strong id="onlineStatus" data-i18n="ui.onlineSolo">SOLO</strong>
+              <span id="onlineSlot" data-i18n="ui.onlineAiFill">AI fills empty slots</span>
+            </div>
+            <label class="online-name-field">
+              <span data-i18n="ui.playerName">PLAYER NAME</span>
+              <input id="onlineNameInput" type="text" maxlength="16" autocomplete="nickname" spellcheck="false" aria-label="Player name" data-i18n-aria-label="aria.playerName" data-i18n-placeholder="ui.playerNamePlaceholder">
+            </label>
+            <div class="online-team-picker" aria-label="Online team" data-i18n-aria-label="aria.onlineTeam">
+              <span data-i18n="ui.onlineTeam">TEAM</span>
+              <div id="onlineTeamButtons" class="online-team-buttons">
+                <button class="online-team-button is-active" type="button" data-online-team="home">HOME</button>
+                <button class="online-team-button" type="button" data-online-team="away">AWAY</button>
+              </div>
+            </div>
+            <div class="online-build-panel">
+              <div class="online-build-heading">
+                <span data-i18n="ui.myBuild">MY BUILD</span>
+                <strong><span id="onlineBuildRole">FW</span> / <span id="onlinePointCounter">150/150</span></strong>
+              </div>
+              <div class="stat-builder online-stat-builder" id="onlineStatControls">
+                <label>
+                  <span data-i18n="stats.speed">SPEED</span>
+                  <output data-stat-output="speed">55</output>
+                  <input type="range" min="20" max="90" value="55" data-stat="speed">
+                </label>
+                <label>
+                  <span data-i18n="stats.physical">PHYSICAL</span>
+                  <output data-stat-output="physical">45</output>
+                  <input type="range" min="20" max="90" value="45" data-stat="physical">
+                </label>
+                <label>
+                  <span data-i18n="stats.power">POWER</span>
+                  <output data-stat-output="power">50</output>
+                  <input type="range" min="20" max="90" value="50" data-stat="power">
+                </label>
+              </div>
+            </div>
+            <div class="online-actions">
+              <button id="createRoomButton" class="build-reset-button" type="button" data-i18n="ui.createRoom">CREATE ROOM</button>
+              <button id="copyRoomButton" class="build-reset-button" type="button" data-i18n="ui.copyLink" disabled>COPY LINK</button>
+              <button id="leaveRoomButton" class="build-reset-button" type="button" data-i18n="ui.leaveRoom" disabled>LEAVE</button>
+            </div>
+            <input id="roomLinkInput" class="room-link-input" type="text" value="" readonly aria-label="Room link" data-i18n-aria-label="aria.roomLink">
+            <div id="onlinePlayers" class="online-players"></div>
+          </section>
+
+          <section class="panel-section controls-launch-section">
+            <button id="settingsPanelButton" class="settings-panel-button" type="button" aria-label="Control settings" data-i18n-aria-label="aria.controlSettings">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M19.4 13.5a7.7 7.7 0 0 0 0-3l2-1.5-2-3.4-2.4 1a8.4 8.4 0 0 0-2.6-1.5L14 2.5h-4l-.4 2.6A8.4 8.4 0 0 0 7 6.6l-2.4-1-2 3.4 2 1.5a7.7 7.7 0 0 0 0 3l-2 1.5 2 3.4 2.4-1a8.4 8.4 0 0 0 2.6 1.5l.4 2.6h4l.4-2.6a8.4 8.4 0 0 0 2.6-1.5l2.4 1 2-3.4-2-1.5z"></path>
+                <path d="M12 8.4a3.6 3.6 0 1 1 0 7.2 3.6 3.6 0 0 1 0-7.2z"></path>
+              </svg>
+              <span data-i18n="ui.controlSettings">操作設定</span>
+            </button>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-heading">
+              <div class="panel-title" data-i18n="ui.myBuild">MY BUILD</div>
+              <span id="pointCounter">150/150</span>
+            </div>
+            <div class="build-summary">
+              <div class="summary-row">
+                <span data-i18n="ui.role">ROLE</span>
+                <strong id="buildRole">FW</strong>
+              </div>
+              <div class="summary-row">
+                <span data-i18n="ui.points">POINTS</span>
+                <strong id="buildTotal">150</strong>
+              </div>
+            </div>
+            <div class="stat-builder" id="statControls">
+              <label>
+                <span data-i18n="stats.speed">SPEED</span>
+                <output id="statValue-speed">55</output>
+                <input id="stat-speed" type="range" min="20" max="90" value="55" data-stat="speed">
+              </label>
+              <label>
+                <span data-i18n="stats.physical">PHYSICAL</span>
+                <output id="statValue-physical">45</output>
+                <input id="stat-physical" type="range" min="20" max="90" value="45" data-stat="physical">
+              </label>
+              <label>
+                <span data-i18n="stats.power">POWER</span>
+                <output id="statValue-power">50</output>
+                <input id="stat-power" type="range" min="20" max="90" value="50" data-stat="power">
+              </label>
+            </div>
+            <button id="resetBuildButton" class="build-reset-button" type="button" data-i18n="ui.resetBuild">RESET BUILD</button>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-title" data-i18n="ui.tactic">TACTIC</div>
+            <div class="segmented vertical" id="tacticButtons">
+              <button class="is-active" data-tactic="balanced">BALANCED</button>
+              <button data-tactic="counter">COUNTER</button>
+              <button data-tactic="press">HIGH PRESS</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-title" data-i18n="ui.matchRule">MATCH RULE</div>
+            <div class="segmented vertical" id="matchRuleButtons">
+              <button class="is-active" data-match-rule="time3">3 MIN MATCH</button>
+              <button data-match-rule="first3">FIRST TO 3</button>
+              <button data-match-rule="first5">FIRST TO 5</button>
+              <button data-match-rule="first7">FIRST TO 7</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-title" data-i18n="ui.kit">BODY COLOR</div>
+            <div class="segmented vertical" id="kitButtons">
+              <button class="is-active" data-kit="crimsonBlue">CRIMSON BODY</button>
+              <button data-kit="blackWhite">INK BODY</button>
+              <button data-kit="redCenter">SUNSET BODY</button>
+              <button data-kit="skyStripes">SKY BODY</button>
+              <button data-kit="sash">CHERRY BODY</button>
+              <button data-kit="redBlack">GRAPHITE BODY</button>
+            </div>
+          </section>
+
+        </aside>
+
+        <section class="pitch-wrap" aria-label="4v4 match" data-i18n-aria-label="aria.match">
+          <canvas id="gameCanvas"></canvas>
+          <div id="lobbyOverlay" class="pitch-lobby-overlay">
+            <div class="lobby-matchup">
+              <span>FALCONS</span>
+              <strong>VS</strong>
+              <span>RIVALS</span>
+            </div>
+            <div class="lobby-loadout">
+              <div>
+                <span data-i18n="ui.matchRule">RULE</span>
+                <strong id="overlayRule">3 MIN MATCH</strong>
+              </div>
+              <div>
+                <span data-i18n="ui.role">ROLE</span>
+                <strong id="overlayRole">FW</strong>
+              </div>
+              <div>
+                <span data-i18n="ui.tactic">TACTIC</span>
+                <strong id="overlayTactic">BALANCED</strong>
+              </div>
+            </div>
+          </div>
+          <div id="toast" class="toast" aria-live="polite"></div>
+        </section>
+
+        <aside class="analysis-panel" aria-label="Match analysis" data-i18n-aria-label="aria.matchAnalysis">
+          <section class="panel-section summary">
+            <div class="panel-title" data-i18n="ui.squad">SQUAD</div>
+            <div class="summary-row">
+              <span data-i18n="ui.player">PLAYER</span>
+              <strong id="aceName">MY PLAYER</strong>
+            </div>
+            <div class="summary-row">
+              <span data-i18n="ui.tactic">TACTIC</span>
+              <strong id="styleName">BALANCED</strong>
+            </div>
+            <div class="summary-row">
+              <span data-i18n="ui.role">ROLE</span>
+              <strong id="teamPower">FW</strong>
+            </div>
+          </section>
+
+          <section class="panel-section item-panel">
+            <div class="panel-title" data-i18n="ui.item">ITEM</div>
+            <div class="item-status">
+              <span id="heldItemIcon">-</span>
+              <strong id="heldItemName">EMPTY</strong>
+            </div>
+            <button id="itemUseButton" class="item-use-button" type="button" aria-label="Use held item" data-i18n-aria-label="aria.useHeldItem">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 13.5 13.5 4 20 10.5 10.5 20 7 17l-3 1 1-3.5z"></path>
+                <path d="m13 5 6 6"></path>
+                <path d="m6.5 16.5 1 1"></path>
+              </svg>
+              <span data-i18n="ui.use">USE</span>
+            </button>
+            <div class="summary-row">
+              <span data-i18n="ui.effect">EFFECT</span>
+              <strong id="itemEffect">READY</strong>
+            </div>
+          </section>
+
+          <section class="panel-section">
+            <div class="panel-title" data-i18n="ui.log">LOG</div>
+            <ol id="matchLog" class="match-log"></ol>
+          </section>
+        </aside>
+      </section>
+
+      <section id="settingsOverlay" class="settings-overlay" hidden>
+        <div class="settings-dialog" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+          <header class="settings-header">
+            <div>
+              <h2 id="settingsTitle" data-i18n="ui.controlSettings">CONTROLS</h2>
+              <p id="settingsHint" data-i18n="ui.controlHint">Select a command, then press a key.</p>
+            </div>
+            <button id="settingsCloseButton" class="icon-button" type="button" aria-label="Close settings" data-i18n-aria-label="aria.closeSettings">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="m6.4 5-1.4 1.4 5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6L19 6.4 17.6 5 12 10.6z"></path>
+              </svg>
+            </button>
+          </header>
+          <div id="controlBindings" class="control-bindings"></div>
+          <footer class="settings-footer">
+            <button id="resetControlsButton" class="build-reset-button" type="button" data-i18n="ui.resetControls">RESET KEYS</button>
+          </footer>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="game.js?v=onlinebuild-final"></script>
+  </body>
+</html>
