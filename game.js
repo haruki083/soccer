@@ -52,6 +52,13 @@ import {
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
 import {
+  applyKnockback as applyKnockbackPhysics,
+  createImpactEffect,
+  isSliding as isSlidingPhysics,
+  slideContactStunDuration,
+  trimImpactEffects,
+} from "./src/gamePhysics.js";
+import {
   clearHeldItem,
   updateActiveItemEffects as updateActiveItemEffectsState,
   updateAiItemUse as updateAiItemUseLogic,
@@ -100,9 +107,21 @@ import {
   sanitizeRoomCode,
 } from "./src/onlineRoom.js";
 import {
+  clearRoomUrl as clearOnlineRoomUrl,
+  fetchNetworkOrigin,
+  onlineRequest,
+  roomSetupSignature as getRoomSetupSignature,
+  setRoomUrl,
+  shareUrl as buildShareUrl,
+} from "./src/onlineClient.js";
+import {
   applyOnlineSnapshot as applyOnlineSnapshotState,
   onlineSnapshot as createOnlineSnapshot,
 } from "./src/onlineSnapshot.js";
+import {
+  onlinePlayerRows,
+  onlineUiState,
+} from "./src/onlineUi.js";
 import {
   playerRadiusFromStats,
   rocketStunDuration,
@@ -152,6 +171,15 @@ import {
   normalizeTacticId,
   normalizeTeamSettings,
 } from "./src/teamSettings.js";
+import {
+  basicMaterial as getBasicMaterial,
+  initThreeGeometries as initThreeGeometrySet,
+  lineMaterial as getLineMaterial,
+  standardMaterial as getStandardMaterial,
+  worldPosition as getWorldPosition,
+  worldX as getWorldX,
+  worldZ as getWorldZ,
+} from "./src/threeScene.js";
 
 (function () {
   "use strict";
@@ -433,6 +461,7 @@ import {
 
   THREE.ColorManagement.enabled = true;
 
+  const APP_VERSION = "splitfour-final";
   const WORLD_SCALE = 0.1;
   const FIELD_WORLD = {
     width: FIELD.width * WORLD_SCALE,
@@ -1463,7 +1492,7 @@ import {
   }
 
   function isSliding(player) {
-    return player.slideTimer > 0 && player.stunTimer <= 0;
+    return isSlidingPhysics(player);
   }
 
   function startSlide(player, move) {
@@ -1547,37 +1576,13 @@ import {
   }
 
   function addImpactEffect(type, x, y, options = {}) {
-    const color =
-      options.color ||
-      (type === "rocket"
-        ? "#ff4f5e"
-        : type === "shockwave"
-          ? "#ff8fab"
-          : type === "magnet"
-            ? "#9b5de5"
-            : "#ffd166");
-    impactEffects.push({
-      id: `impact-${Math.random().toString(16).slice(2)}`,
-      type,
-      x,
-      y,
-      color,
-      radius: options.radius || 1,
-      ttl: options.ttl || IMPACT_EFFECT_DURATION,
-      duration: options.ttl || IMPACT_EFFECT_DURATION,
-      height: options.height || 0.18,
-    });
-    impactEffects = impactEffects.slice(-28);
+    impactEffects.push(createImpactEffect(type, x, y, options, IMPACT_EFFECT_DURATION));
+    impactEffects = trimImpactEffects(impactEffects);
   }
 
   function applyKnockback(player, aim, force, reaction = HIT_REACTION_DURATION) {
     const resistance = physicalResistanceFromStat(player?.stats?.physical);
-    const power = force / resistance;
-    player.vx = aim.x * power;
-    player.vy = aim.y * power;
-    player.hitReactionTimer = Math.max(player.hitReactionTimer || 0, reaction);
-    player.hitDirX = aim.x;
-    player.hitDirY = aim.y;
+    applyKnockbackPhysics(player, aim, force, resistance, reaction);
   }
 
   function applyShockwave(player) {
@@ -2049,7 +2054,7 @@ import {
       if (target.shieldTimer > 0) {
         target.shieldTimer = Math.max(0, target.shieldTimer - 0.7);
       } else {
-        target.stunTimer = Math.max(target.stunTimer, 0.5 + (1 - target.stats.physical) * 1.5);
+        target.stunTimer = Math.max(target.stunTimer, slideContactStunDuration(target));
       }
       if (attacker.isHuman) logEvent(() => playerEvent(attacker, "tackle"));
     };
@@ -2187,32 +2192,8 @@ import {
     );
   }
 
-  function onlineRequest(path, options = {}) {
-    return fetch(path, {
-      ...options,
-      headers: {
-        "content-type": "application/json",
-        ...(options.headers || {}),
-      },
-    });
-  }
-
   function roomSetupSignature() {
-    return JSON.stringify({
-      room: online.roomCode,
-      host: online.hostId,
-      slots: online.slots.map((slot) => ({
-        clientId: slot.clientId,
-        connected: slot.connected,
-        teamKey: slot.teamKey,
-        slot: slot.slot,
-        name: slot.profile?.name,
-        teamPreference: slot.profile?.teamPreference,
-        stats: slot.profile?.stats,
-        kit: slot.profile?.kit,
-      })),
-      teamSettings: state.teamSettings,
-    });
+    return getRoomSetupSignature(online, state.teamSettings);
   }
 
   function applyHostSettings(settings) {
@@ -2276,34 +2257,31 @@ import {
   function updateOnlineUi() {
     const active = isOnlineActive();
     const pendingCode = !active && !online.connecting ? sanitizeRoomCode(online.pendingRoomCode) : "";
-    const statusKey = online.connecting
-      ? "ui.onlineConnecting"
-      : active
-        ? isOnlineHost()
-          ? "ui.onlineHost"
-          : "ui.onlineGuest"
-        : pendingCode
-          ? "ui.readyRoom"
-        : "ui.onlineSolo";
-    const connectedCount = online.slots.filter((slot) => slot.connected).length;
-    const roomText = active && online.roomCode
-      ? `${tr(statusKey)} ${online.roomCode}`
-      : pendingCode
-        ? `${tr(statusKey)} ${pendingCode}`
-        : tr(statusKey);
+    const view = onlineUiState({
+      active,
+      connecting: online.connecting,
+      pendingRoomCode: pendingCode,
+      roomCode: online.roomCode,
+      shareUrl: online.shareUrl,
+      slots: online.slots,
+      tr,
+      isHost: isOnlineHost(),
+      localSlotText: localSlotText(),
+      href: window.location.href,
+    });
 
-    if (onlineBadge) onlineBadge.textContent = active ? `${connectedCount}/8` : tr(statusKey);
-    if (onlineStatus) onlineStatus.textContent = roomText;
-    if (onlineSlot) onlineSlot.textContent = active ? localSlotText() : pendingCode ? tr("ui.onlinePendingBuild") : tr("ui.onlineAiFill");
+    if (onlineBadge) onlineBadge.textContent = view.badgeText;
+    if (onlineStatus) onlineStatus.textContent = view.statusText;
+    if (onlineSlot) onlineSlot.textContent = view.slotText;
     if (createRoomButton) {
-      createRoomButton.disabled = online.connecting;
-      createRoomButton.textContent = pendingCode ? tr("ui.joinRoom") : active ? tr("ui.copyLink") : tr("ui.createRoom");
+      createRoomButton.disabled = view.createRoomDisabled;
+      createRoomButton.textContent = view.createRoomText;
     }
-    if (copyRoomButton) copyRoomButton.disabled = !active || !online.shareUrl;
-    if (leaveRoomButton) leaveRoomButton.disabled = !active && !online.connecting && !pendingCode;
+    if (copyRoomButton) copyRoomButton.disabled = view.copyRoomDisabled;
+    if (leaveRoomButton) leaveRoomButton.disabled = view.leaveRoomDisabled;
     if (roomLinkInput) {
-      roomLinkInput.value = active ? online.shareUrl : pendingCode ? window.location.href : "";
-      roomLinkInput.placeholder = active ? "" : tr("ui.onlineSolo");
+      roomLinkInput.value = view.roomLinkValue;
+      roomLinkInput.placeholder = view.roomLinkPlaceholder;
     }
     renderOnlineTeamButtons();
     renderOnlinePlayers();
@@ -2316,19 +2294,25 @@ import {
       return;
     }
 
-    const chips = online.slots.map((slot) => {
+    const rows = onlinePlayerRows({
+      slots: online.slots,
+      clientId: online.clientId,
+      hostId: online.hostId,
+      playerRoleFromSlot,
+      displayNameForOnlineSlot,
+      onlineSlotLabel,
+      tr,
+    });
+
+    const chips = rows.map((row) => {
       const chip = document.createElement("div");
-      chip.className = `online-player-chip${slot.clientId === online.clientId ? " is-you" : ""}${slot.connected ? "" : " is-offline"}`;
+      chip.className = row.className;
 
       const label = document.createElement("strong");
-      const role = playerRoleFromSlot(slot);
-      const name = displayNameForOnlineSlot(slot, slot.teamKey, slot.slot) || onlineSlotLabel(slot.teamKey, slot.slot);
-      label.textContent = name;
+      label.textContent = row.name;
 
       const detail = document.createElement("span");
-      const you = slot.clientId === online.clientId ? ` / ${tr("ui.you")}` : "";
-      const host = slot.clientId === online.hostId ? ` / ${tr("ui.onlineHost")}` : "";
-      detail.textContent = `${onlineSlotLabel(slot.teamKey, slot.slot)} / ${role} / ${slot.connected ? "ONLINE" : "OFFLINE"}${you}${host}`;
+      detail.textContent = row.detail;
 
       chip.append(label, detail);
       return chip;
@@ -2337,45 +2321,19 @@ import {
   }
 
   async function refreshNetworkOrigin() {
-    online.networkOrigin = "";
-    if (!["127.0.0.1", "localhost", "::1"].includes(window.location.hostname)) return;
-    try {
-      const response = await fetch("/api/network");
-      if (!response.ok) return;
-      const data = await response.json();
-      const origin = data?.lanOrigins?.[0];
-      if (origin) online.networkOrigin = origin;
-    } catch {
-      // Link sharing still works from the current origin.
-    }
+    online.networkOrigin = await fetchNetworkOrigin(window.location.hostname);
   }
 
   function updateRoomUrl(roomCode = online.roomCode) {
-    if (!roomCode) return;
-    const current = new URL(window.location.href);
-    current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splititems-final");
-    window.history.replaceState({}, "", current);
+    setRoomUrl(window.location, window.history, ONLINE_ROOM_PARAM, roomCode, APP_VERSION);
   }
 
   function clearRoomUrl() {
-    const current = new URL(window.location.href);
-    current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splititems-final");
-    window.history.replaceState({}, "", current);
+    clearOnlineRoomUrl(window.location, window.history, ONLINE_ROOM_PARAM, APP_VERSION);
   }
 
   function updateShareUrl() {
-    if (!online.roomCode) {
-      online.shareUrl = "";
-      return;
-    }
-    const current = new URL(window.location.href);
-    current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splititems-final");
-    online.shareUrl = online.networkOrigin
-      ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
-      : current.href;
+    online.shareUrl = buildShareUrl(window.location, ONLINE_ROOM_PARAM, online.roomCode, online.networkOrigin, APP_VERSION);
   }
 
   function connectOnlineEvents(roomCode) {
@@ -2759,114 +2717,31 @@ import {
   }
 
   function worldX(x) {
-    return (x - FIELD.width / 2) * WORLD_SCALE;
+    return getWorldX(FIELD, WORLD_SCALE, x);
   }
 
   function worldZ(y) {
-    return (y - FIELD.height / 2) * WORLD_SCALE;
+    return getWorldZ(FIELD, WORLD_SCALE, y);
   }
 
   function worldPosition(x, y, elevation = 0) {
-    return new THREE.Vector3(worldX(x), elevation, worldZ(y));
-  }
-
-  function materialKey(type, color, options = {}) {
-    return [
-      type,
-      color,
-      options.opacity ?? 1,
-      options.emissive ?? "",
-      options.roughness ?? "",
-      options.metalness ?? "",
-    ].join(":");
+    return getWorldPosition(FIELD, WORLD_SCALE, x, y, elevation);
   }
 
   function standardMaterial(color, options = {}) {
-    const key = materialKey("standard", color, options);
-    if (!view3d.materials.has(key)) {
-      const material = new THREE.MeshStandardMaterial({
-        color,
-        emissive: options.emissive || "#000000",
-        emissiveIntensity: options.emissiveIntensity || 0,
-        metalness: options.metalness ?? 0.04,
-        roughness: options.roughness ?? 0.72,
-        transparent: options.opacity !== undefined && options.opacity < 1,
-        opacity: options.opacity ?? 1,
-      });
-      view3d.materials.set(key, material);
-    }
-    return view3d.materials.get(key);
+    return getStandardMaterial(view3d.materials, color, options);
   }
 
   function basicMaterial(color, options = {}) {
-    const key = materialKey("basic", color, options);
-    if (!view3d.materials.has(key)) {
-      const material = new THREE.MeshBasicMaterial({
-        color,
-        transparent: options.opacity !== undefined && options.opacity < 1,
-        opacity: options.opacity ?? 1,
-        depthWrite: options.depthWrite ?? true,
-        side: options.side ?? THREE.FrontSide,
-      });
-      view3d.materials.set(key, material);
-    }
-    return view3d.materials.get(key);
+    return getBasicMaterial(view3d.materials, color, options);
   }
 
   function lineMaterial(color, opacity = 1) {
-    const key = `line:${color}:${opacity}`;
-    if (!view3d.materials.has(key)) {
-      view3d.materials.set(
-        key,
-        new THREE.LineBasicMaterial({
-          color,
-          transparent: opacity < 1,
-          opacity,
-        }),
-      );
-    }
-    return view3d.materials.get(key);
+    return getLineMaterial(view3d.materials, color, opacity);
   }
 
   function initThreeGeometries() {
-    if (view3d.geometries.body) return;
-    view3d.geometries.body = new THREE.CapsuleGeometry(0.78, 1.02, 12, 32);
-    view3d.geometries.torsoBulge = new THREE.SphereGeometry(0.76, 30, 20);
-    view3d.geometries.hipBulge = new THREE.SphereGeometry(0.64, 26, 16);
-    view3d.geometries.shoulder = new THREE.CapsuleGeometry(0.22, 1.42, 8, 18);
-    view3d.geometries.joint = new THREE.SphereGeometry(0.34, 22, 16);
-    view3d.geometries.pelvis = new THREE.SphereGeometry(0.58, 28, 18);
-    view3d.geometries.arm = new THREE.CapsuleGeometry(0.17, 1.06, 8, 16);
-    view3d.geometries.leg = new THREE.CapsuleGeometry(0.25, 0.82, 10, 18);
-    view3d.geometries.head = new THREE.SphereGeometry(0.64, 30, 20);
-    view3d.geometries.neck = new THREE.CylinderGeometry(0.22, 0.28, 0.34, 20);
-    view3d.geometries.limb = new THREE.CapsuleGeometry(0.18, 1.18, 8, 16);
-    view3d.geometries.hand = new THREE.CapsuleGeometry(0.12, 0.1, 8, 12);
-    view3d.geometries.foot = new THREE.SphereGeometry(0.28, 18, 12);
-    view3d.geometries.shadow = new THREE.CircleGeometry(1.8, 28);
-    view3d.geometries.marker = new THREE.TorusGeometry(1.72, 0.06, 8, 40);
-    view3d.geometries.statusRing = new THREE.TorusGeometry(2.02, 0.06, 8, 44);
-    view3d.geometries.ball = new THREE.SphereGeometry(ball.radius * WORLD_SCALE, 26, 18);
-    view3d.geometries.ballPatch = new THREE.TorusGeometry(ball.radius * WORLD_SCALE * 0.46, 0.018, 8, 24);
-    view3d.geometries.itemBox = new THREE.BoxGeometry(1.75, 1.75, 1.75);
-    view3d.geometries.itemCore = new THREE.OctahedronGeometry(1.08, 0);
-    view3d.geometries.shieldCore = new THREE.TorusGeometry(0.9, 0.14, 12, 32);
-    view3d.geometries.rocketBody = new THREE.CylinderGeometry(0.32, 0.32, 1.72, 18);
-    view3d.geometries.rocketNose = new THREE.ConeGeometry(0.48, 0.9, 18);
-    view3d.geometries.rocketFlame = new THREE.ConeGeometry(0.62, 1.16, 16);
-    view3d.geometries.rocketTrail = new THREE.CylinderGeometry(0.14, 0.46, 5.8, 18);
-    view3d.geometries.rocketTrailGlow = new THREE.CylinderGeometry(0.3, 0.8, 6.8, 18);
-    view3d.geometries.impactRing = new THREE.TorusGeometry(1, 0.045, 8, 64);
-    view3d.geometries.impactCore = new THREE.SphereGeometry(0.22, 18, 12);
-    view3d.geometries.patchBox = new THREE.BoxGeometry(1, 1, 1);
-    view3d.geometries.patchDot = new THREE.SphereGeometry(0.11, 10, 8);
-    view3d.geometries.visor = new THREE.SphereGeometry(0.5, 18, 10);
-    view3d.geometries.faceDot = new THREE.SphereGeometry(0.085, 12, 8);
-    view3d.geometries.faceShade = new THREE.SphereGeometry(0.48, 18, 10);
-    view3d.geometries.capCrown = new THREE.SphereGeometry(0.66, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.52);
-    view3d.geometries.capBrim = new THREE.CylinderGeometry(0.48, 0.42, 0.13, 32);
-    view3d.geometries.capBand = new THREE.TorusGeometry(0.62, 0.035, 8, 48);
-    view3d.geometries.stunStar = new THREE.TorusGeometry(0.22, 0.035, 7, 16);
+    initThreeGeometrySet(view3d.geometries, ball.radius, WORLD_SCALE);
   }
 
   function createLine(points, material) {
