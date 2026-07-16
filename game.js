@@ -60,6 +60,14 @@ import {
 } from "./src/controls.js";
 import { I18N } from "./src/i18n.js";
 import {
+  clearHeldItem,
+  updateActiveItemEffects as updateActiveItemEffectsState,
+  updateAiItemUse as updateAiItemUseLogic,
+  updateImpactEffects as updateImpactEffectsState,
+  updateItemDrops as updateItemDropsLogic,
+  updateStatusTimers as updateStatusTimersState,
+} from "./src/itemLogic.js";
+import {
   heldItemLabel as formatHeldItemLabel,
   itemCharges as getItemCharges,
   itemIcon as getItemIcon,
@@ -1614,62 +1622,12 @@ import {
     }
   }
 
-  function randomItemType() {
-    const roll = Math.random();
-    if (roll < 0.22) return "boost";
-    if (roll < 0.4) return "rocket";
-    if (roll < 0.56) return "shield";
-    if (roll < 0.74) return "power";
-    if (roll < 0.9) return "magnet";
-    return "shockwave";
-  }
-
-  function spawnItemDrop() {
-    if (itemDrops.length >= 5) return;
-    const type = randomItemType();
-    itemDrops.push({
-      id: `${type}-${Math.random().toString(16).slice(2)}`,
-      type,
-      x: 180 + Math.random() * (FIELD.width - 360),
-      y: 90 + Math.random() * (FIELD.height - 180),
-      radius: 15,
-      ttl: 13,
-      pulse: Math.random() * Math.PI * 2,
-    });
-  }
-
   function updateItemDrops(dt) {
-    match.nextItemDrop -= dt;
-    if (match.nextItemDrop <= 0) {
-      spawnItemDrop();
-      match.nextItemDrop = 4.5 + Math.random() * 4.5;
-    }
-
-    for (const drop of itemDrops) {
-      drop.ttl -= dt;
-      drop.pulse += dt * 5;
-    }
-    itemDrops = itemDrops.filter((drop) => drop.ttl > 0);
-
-    for (const player of players) {
-      if (player.heldItem || player.stunTimer > 0) continue;
-      const index = itemDrops.findIndex((drop) => distance(player, drop) < player.radius + drop.radius + 3);
-      if (index === -1) continue;
-
-      const [drop] = itemDrops.splice(index, 1);
-      player.heldItem = drop.type;
-      player.heldItemCharges = itemCharges(drop.type);
-      if (player.isHuman) {
-        const itemType = drop.type;
-        logEvent(() => `${tr("event.picked")} ${heldItemLabel(player)}`);
-        showToast(heldItemLabel(player));
-      }
-    }
-  }
-
-  function clearHeldItem(player) {
-    player.heldItem = null;
-    player.heldItemCharges = 0;
+    itemDrops = updateItemDropsLogic(match, itemDrops, players, FIELD, itemCharges, (player) => {
+      if (!player.isHuman) return;
+      logEvent(() => `${tr("event.picked")} ${heldItemLabel(player)}`);
+      showToast(heldItemLabel(player));
+    }, dt);
   }
 
   function addImpactEffect(type, x, y, options = {}) {
@@ -1881,70 +1839,19 @@ import {
   }
 
   function updateStatusTimers(dt) {
-    for (const player of players) {
-      player.speedBoostTimer = Math.max(0, player.speedBoostTimer - dt);
-      player.powerBoostTimer = Math.max(0, player.powerBoostTimer - dt);
-      player.magnetTimer = Math.max(0, player.magnetTimer - dt);
-      player.shieldTimer = Math.max(0, player.shieldTimer - dt);
-      player.shockwaveTimer = Math.max(0, player.shockwaveTimer - dt);
-      player.stunTimer = Math.max(0, player.stunTimer - dt);
-      player.slideTimer = Math.max(0, player.slideTimer - dt);
-      player.slideCooldown = Math.max(0, player.slideCooldown - dt);
-      player.hitReactionTimer = Math.max(0, player.hitReactionTimer - dt);
-      if (player.slideTimer <= 0) {
-        player.slideHitBall = false;
-        player.slideHitPlayers?.clear();
-      }
-    }
+    updateStatusTimersState(players, dt);
   }
 
   function updateImpactEffects(dt) {
-    for (const effect of impactEffects) {
-      effect.ttl -= dt;
-    }
-    impactEffects = impactEffects.filter((effect) => effect.ttl > 0);
+    impactEffects = updateImpactEffectsState(impactEffects, dt);
   }
 
   function updateActiveItemEffects(dt) {
-    for (const player of players) {
-      if (player.magnetTimer <= 0 || player.stunTimer > 0) continue;
-      const dx = player.x - ball.x;
-      const dy = player.y - ball.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const radius = 460 + player.stats.physical * 95;
-      if (d > radius || d < player.radius + ball.radius + 7) continue;
-
-      const pull = ((220 + player.stats.power * 220) * (1 - d / radius) + 160) * 1.3;
-      ball.carrier = null;
-      ball.vx += (dx / d) * pull * dt;
-      ball.vy += (dy / d) * pull * dt;
-      ball.lastTouch = player.teamKey;
-    }
+    updateActiveItemEffectsState(players, ball, dt);
   }
 
   function updateAiItemUse(player, dt) {
-    if (!player.heldItem || player.stunTimer > 0 || player.controller !== "ai") return;
-
-    const itemUse = aiMovementProfile(player).itemUse;
-    const target = ball;
-    const aim = normalize(target.x - player.x, target.y - player.y);
-    const targetDistance = distance(player, target);
-    player.facingX = aim.x;
-    player.facingY = aim.y;
-
-    if (player.heldItem === "boost" && targetDistance < 260 && Math.random() < dt * 0.72 * itemUse) {
-      useHeldItem(player);
-    } else if (player.heldItem === "power" && targetDistance < 185 && Math.random() < dt * 0.86 * itemUse) {
-      useHeldItem(player);
-    } else if (player.heldItem === "magnet" && targetDistance < 420 && targetDistance > 84 && Math.random() < dt * 0.76 * itemUse) {
-      useHeldItem(player);
-    } else if (player.heldItem === "shockwave" && (targetDistance < 165 || nearestOpponentDistance(player) < 92) && Math.random() < dt * 0.78 * itemUse) {
-      useHeldItem(player);
-    } else if (player.heldItem === "shield" && nearestOpponentDistance(player) < 82 && Math.random() < dt * 0.7 * itemUse) {
-      useHeldItem(player);
-    } else if (player.heldItem === "rocket" && targetDistance < 430 && Math.random() < dt * 0.58 * itemUse) {
-      useHeldItem(player);
-    }
+    updateAiItemUseLogic(player, ball, dt, aiMovementProfile(player).itemUse, nearestOpponentDistance, useHeldItem);
   }
 
   function updateCarrier(player, plan, dt) {
@@ -2531,14 +2438,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitonlinesnapshot-final");
+    current.searchParams.set("v", "splititems-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitonlinesnapshot-final");
+    current.searchParams.set("v", "splititems-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2549,7 +2456,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitonlinesnapshot-final");
+    current.searchParams.set("v", "splititems-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
