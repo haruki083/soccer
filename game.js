@@ -2117,6 +2117,59 @@ import * as THREE from "./vendor/three.module.js";
     return `${player.tacticalRole}:${player.color}:${player.kitId || "none"}`;
   }
 
+  function createNameLabelTexture(player, labelText) {
+    const canvasLabel = document.createElement("canvas");
+    canvasLabel.width = 512;
+    canvasLabel.height = 128;
+    const labelCtx = canvasLabel.getContext("2d");
+    const text = String(labelText || "").slice(0, 18);
+    const teamColor = player.teamKey === "away" ? "#4ec7ff" : "#ffd166";
+
+    labelCtx.clearRect(0, 0, canvasLabel.width, canvasLabel.height);
+    labelCtx.fillStyle = "rgba(7, 16, 13, 0.58)";
+    labelCtx.strokeStyle = teamColor;
+    labelCtx.lineWidth = 5;
+    labelCtx.beginPath();
+    labelCtx.roundRect(16, 24, 480, 80, 30);
+    labelCtx.fill();
+    labelCtx.globalAlpha = 0.82;
+    labelCtx.stroke();
+    labelCtx.globalAlpha = 1;
+    labelCtx.font = "900 44px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    labelCtx.textAlign = "center";
+    labelCtx.textBaseline = "middle";
+    labelCtx.lineWidth = 8;
+    labelCtx.strokeStyle = "rgba(0, 0, 0, 0.45)";
+    labelCtx.strokeText(text, 256, 64);
+    labelCtx.fillStyle = "rgba(255, 249, 236, 0.92)";
+    labelCtx.fillText(text, 256, 64);
+
+    const texture = new THREE.CanvasTexture(canvasLabel);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    texture.needsUpdate = true;
+    return texture;
+  }
+
+  function updatePlayerNameLabel(player, object) {
+    const label = object.userData.nameLabel;
+    const material = object.userData.nameLabelMaterial;
+    if (!label || !material) return;
+
+    const visible = isOnlineActive() && player.controller !== "ai" && Boolean(player.name);
+    label.visible = visible;
+    if (!visible) return;
+
+    const labelText = player.name;
+    if (object.userData.nameLabelText !== labelText || object.userData.nameLabelTeam !== player.teamKey) {
+      if (material.map) material.map.dispose();
+      material.map = createNameLabelTexture(player, labelText);
+      material.needsUpdate = true;
+      object.userData.nameLabelText = labelText;
+      object.userData.nameLabelTeam = player.teamKey;
+    }
+    label.position.y = 5.24 + player.stats.physical * 0.36;
+  }
+
   function goalFrontStartFor(teamKey) {
     const team = TEAM[teamKey];
     const ySpread = (FIELD.goalBottom - FIELD.goalTop) * 0.42;
@@ -3512,14 +3565,14 @@ import * as THREE from "./vendor/three.module.js";
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "onlinewording-final");
+    current.searchParams.set("v", "namelabel-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "onlinewording-final");
+    current.searchParams.set("v", "namelabel-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -3530,7 +3583,7 @@ import * as THREE from "./vendor/three.module.js";
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "onlinewording-final");
+    current.searchParams.set("v", "namelabel-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
@@ -4662,6 +4715,19 @@ import * as THREE from "./vendor/three.module.js";
     stunGroup.visible = false;
     root.add(stunGroup);
 
+    const nameLabelMaterial = new THREE.SpriteMaterial({
+      transparent: true,
+      opacity: 0.86,
+      depthWrite: false,
+      depthTest: false,
+    });
+    const nameLabel = new THREE.Sprite(nameLabelMaterial);
+    nameLabel.position.set(0, 5.38, 0);
+    nameLabel.scale.set(3.7, 0.92, 1);
+    nameLabel.renderOrder = 18;
+    nameLabel.visible = false;
+    root.add(nameLabel);
+
     root.userData = {
       body,
       torsoBulge,
@@ -4684,6 +4750,10 @@ import * as THREE from "./vendor/three.module.js";
       waveRing,
       ballRing,
       stunGroup,
+      nameLabel,
+      nameLabelMaterial,
+      nameLabelText: "",
+      nameLabelTeam: "",
       baseRadius: 18,
     };
     return root;
@@ -4992,6 +5062,7 @@ import * as THREE from "./vendor/three.module.js";
     object.userData.ballRing.rotation.z += 0.025;
     object.userData.stunGroup.visible = player.stunTimer > 0;
     object.userData.stunGroup.rotation.y += 0.1;
+    updatePlayerNameLabel(player, object);
   }
 
   function syncItemObjects() {
