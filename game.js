@@ -8,7 +8,6 @@ import {
   LANGUAGE_STORAGE_KEY,
   MATCH_RULES,
   MATCH_RULE_STORAGE_KEY,
-  ONLINE_CLIENT_STORAGE_KEY,
   ONLINE_INPUT_INTERVAL,
   ONLINE_ROOM_PARAM,
   ONLINE_SNAPSHOT_INTERVAL,
@@ -78,6 +77,11 @@ import {
   normalizeOnlineTeam,
   playerNameForDisplay,
 } from "./src/playerProfile.js";
+import {
+  initialOnlineClientId,
+  readRoomCodeFromUrl,
+  sanitizeRoomCode,
+} from "./src/onlineRoom.js";
 import {
   DEFAULT_PLAYER_STATS,
   PLAYER_POINT_BUDGET,
@@ -1052,40 +1056,6 @@ import {
   let itemDrops = [];
   let rockets = [];
   let impactEffects = [];
-
-  function makeClientId() {
-    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-    return `c-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-  }
-
-  function initialOnlineClientId() {
-    try {
-      const saved = localStorage.getItem(ONLINE_CLIENT_STORAGE_KEY);
-      if (saved) return saved;
-      const created = makeClientId();
-      localStorage.setItem(ONLINE_CLIENT_STORAGE_KEY, created);
-      return created;
-    } catch {
-      return makeClientId();
-    }
-  }
-
-  function readRoomCodeFromUrl() {
-    try {
-      const room = new URLSearchParams(window.location.search).get(ONLINE_ROOM_PARAM);
-      return sanitizeRoomCode(room);
-    } catch {
-      return "";
-    }
-  }
-
-  function sanitizeRoomCode(value) {
-    return String(value || "")
-      .trim()
-      .toUpperCase()
-      .replace(/[^A-Z0-9-]/g, "")
-      .slice(0, 16);
-  }
 
   function isGoalMouthY(y) {
     return y >= FIELD.goalTop && y <= FIELD.goalBottom;
@@ -2664,14 +2634,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitteamsettings-final");
+    current.searchParams.set("v", "splitonlineroom-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitteamsettings-final");
+    current.searchParams.set("v", "splitonlineroom-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2682,7 +2652,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitteamsettings-final");
+    current.searchParams.set("v", "splitonlineroom-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
