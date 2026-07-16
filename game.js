@@ -19,7 +19,6 @@ import {
 import {
   AWAY_KIT_STYLE,
   DEFAULT_AI_MOVEMENT_PROFILE,
-  DEFAULT_AWAY_KIT,
   DEFAULT_KIT,
   ENEMY_AI_ARCHETYPES,
   FIELD,
@@ -97,6 +96,12 @@ import {
   speedBoostMultiplier,
   speedDriveFromStat,
 } from "./src/stats.js";
+import {
+  defaultTeamSetting,
+  normalizeKitId,
+  normalizeTacticId,
+  normalizeTeamSettings,
+} from "./src/teamSettings.js";
 
 (function () {
   "use strict";
@@ -557,35 +562,6 @@ import {
   function playerKitStyle(player) {
     if (player.teamKey === "away" && player.kitId === "away") return AWAY_KIT_STYLE;
     return selectedKitStyle(player.kitId || teamKitId(player.teamKey));
-  }
-
-  function normalizeTacticId(tacticId, fallback = "balanced") {
-    return TACTICS[tacticId] ? tacticId : fallback;
-  }
-
-  function normalizeKitId(kitId, fallback = DEFAULT_KIT) {
-    return KIT_STYLES[kitId] ? kitId : fallback;
-  }
-
-  function defaultTeamSetting(teamKey) {
-    return teamKey === "away"
-      ? { tactic: "counter", kit: DEFAULT_AWAY_KIT }
-      : { tactic: "balanced", kit: DEFAULT_KIT };
-  }
-
-  function normalizeTeamSetting(teamKey, settings = {}) {
-    const fallback = defaultTeamSetting(teamKey);
-    return {
-      tactic: normalizeTacticId(settings.tactic, fallback.tactic),
-      kit: normalizeKitId(settings.kit, fallback.kit),
-    };
-  }
-
-  function normalizeTeamSettings(settings = {}) {
-    return {
-      home: normalizeTeamSetting("home", settings.home),
-      away: normalizeTeamSetting("away", settings.away),
-    };
   }
 
   function initialTeamSettings() {
@@ -2688,14 +2664,14 @@ import {
     if (!roomCode) return;
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, roomCode);
-    current.searchParams.set("v", "splitprofile-final");
+    current.searchParams.set("v", "splitteamsettings-final");
     window.history.replaceState({}, "", current);
   }
 
   function clearRoomUrl() {
     const current = new URL(window.location.href);
     current.searchParams.delete(ONLINE_ROOM_PARAM);
-    current.searchParams.set("v", "splitprofile-final");
+    current.searchParams.set("v", "splitteamsettings-final");
     window.history.replaceState({}, "", current);
   }
 
@@ -2706,7 +2682,7 @@ import {
     }
     const current = new URL(window.location.href);
     current.searchParams.set(ONLINE_ROOM_PARAM, online.roomCode);
-    current.searchParams.set("v", "splitprofile-final");
+    current.searchParams.set("v", "splitteamsettings-final");
     online.shareUrl = online.networkOrigin
       ? `${online.networkOrigin}${current.pathname}${current.search}${current.hash}`
       : current.href;
