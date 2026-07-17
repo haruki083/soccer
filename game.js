@@ -1439,7 +1439,7 @@ import {
       (0.8 + urgency * 0.38) *
       (0.72 + player.stamina * 0.28) *
       sizeDrag;
-    const accel = (320 + speedDrive * 930 + (1 - player.stats.physical) * 155) * accelBoost;
+    const accel = (285 + speedDrive * 730 + (1 - player.stats.physical) * 105) * accelBoost;
     const mix = clamp((accel * dt) / Math.max(speed, 1), 0, 1);
 
     player.vx = lerp(player.vx, target.x * speed, mix);
