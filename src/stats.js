@@ -98,7 +98,7 @@ export function playerStatsFromPointBuild(pointStats) {
 }
 
 export function physicalResistanceFromStat(physicalStat) {
-  const physical = clamp(physicalStat ?? 0.5, 0, 1);
+  const physical = clamp(physicalStat ?? 0.5, 0, 1.25);
   for (let i = 1; i < PHYSICAL_RESISTANCE_CURVE.length; i += 1) {
     const lower = PHYSICAL_RESISTANCE_CURVE[i - 1];
     const upper = PHYSICAL_RESISTANCE_CURVE[i];
@@ -109,11 +109,15 @@ export function physicalResistanceFromStat(physicalStat) {
       return lower.resistance + (upper.resistance - lower.resistance) * t;
     }
   }
-  return PHYSICAL_RESISTANCE_CURVE[PHYSICAL_RESISTANCE_CURVE.length - 1].resistance;
+  const last = PHYSICAL_RESISTANCE_CURVE[PHYSICAL_RESISTANCE_CURVE.length - 1];
+  const previous = PHYSICAL_RESISTANCE_CURVE[PHYSICAL_RESISTANCE_CURVE.length - 2];
+  const physicalPoint = PLAYER_STAT_MIN + physical * (PLAYER_STAT_MAX - PLAYER_STAT_MIN);
+  const slope = (last.resistance - previous.resistance) / (last.stat - previous.stat);
+  return last.resistance + Math.max(0, physicalPoint - last.stat) * slope;
 }
 
 export function speedDriveFromStat(speedStat, exponent) {
-  const speed = clamp(speedStat, 0, 1);
+  const speed = clamp(speedStat, 0, 1.25);
   const middleBandSlowdown =
     1 -
     0.18 *
@@ -123,7 +127,7 @@ export function speedDriveFromStat(speedStat, exponent) {
 }
 
 export function powerShoveFromStat(powerStat) {
-  const power = PLAYER_STAT_MIN + clamp(powerStat, 0, 1) * (PLAYER_STAT_MAX - PLAYER_STAT_MIN);
+  const power = PLAYER_STAT_MIN + clamp(powerStat, 0, 1.25) * (PLAYER_STAT_MAX - PLAYER_STAT_MIN);
   for (let i = 1; i < POWER_SHOVE_CURVE.length; i += 1) {
     const lower = POWER_SHOVE_CURVE[i - 1];
     const upper = POWER_SHOVE_CURVE[i];
@@ -132,7 +136,10 @@ export function powerShoveFromStat(powerStat) {
       return lower.shove + (upper.shove - lower.shove) * t;
     }
   }
-  return POWER_SHOVE_CURVE[POWER_SHOVE_CURVE.length - 1].shove;
+  const last = POWER_SHOVE_CURVE[POWER_SHOVE_CURVE.length - 1];
+  const previous = POWER_SHOVE_CURVE[POWER_SHOVE_CURVE.length - 2];
+  const slope = (last.shove - previous.shove) / (last.stat - previous.stat);
+  return last.shove + Math.max(0, power - last.stat) * slope;
 }
 
 export function speedBoostMultiplier(player) {

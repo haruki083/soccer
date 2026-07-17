@@ -67,6 +67,7 @@
 - ステータス差をもっと強く出す: `src/stats.js`
 - 体格でキャラサイズを変える計算: `src/playerModel.js`
 - 毎試合の敵AIの個性: `src/aiProfiles.js`
+- AI難易度の合計値調整: `src/appConfig.js`, `src/aiProfiles.js`
 
 ### 入力・表示テキスト系
 
@@ -150,6 +151,7 @@
 | アイテムを追加したい | `src/config.js`, `src/itemLogic.js`, `game.js`, `src/i18n.js` |
 | ロケットやショックウェーブを調整したい | `src/config.js`, `src/gamePhysics.js`, `game.js` |
 | オンライン部屋の人数やチーム処理を変えたい | `server.mjs`, `src/onlineRoom.js`, `src/onlineClient.js` |
+| AI難易度の合計値を変えたい | `src/appConfig.js`, `src/aiProfiles.js`, `server.mjs` |
 | オンライン同期を変えたい | `src/onlineSnapshot.js`, `game.js` |
 | 操作キーを増やしたい | `src/controls.js`, `game.js`, `src/i18n.js` |
 | 表示テキストを変えたい | `src/i18n.js` |

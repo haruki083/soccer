@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>4v4 Character Football Prototype</title>
-    <link rel="stylesheet" href="styles.css?v=splitfour-final">
+    <link rel="stylesheet" href="styles.css?v=aidifficulty-final">
   </head>
   <body>
     <main class="app-shell">
@@ -200,6 +200,16 @@
           </section>
 
           <section class="panel-section">
+            <div class="panel-title" data-i18n="ui.aiDifficulty">AI LEVEL</div>
+            <div class="segmented vertical" id="aiDifficultyButtons">
+              <button data-ai-difficulty="ai100">TOTAL 100</button>
+              <button class="is-active" data-ai-difficulty="ai150">TOTAL 150</button>
+              <button data-ai-difficulty="ai200">TOTAL 200</button>
+              <button data-ai-difficulty="ai300">TOTAL 300</button>
+            </div>
+          </section>
+
+          <section class="panel-section">
             <div class="panel-title" data-i18n="ui.kit">BODY COLOR</div>
             <div class="segmented vertical" id="kitButtons">
               <button class="is-active" data-kit="crimsonBlue">CRIMSON BODY</button>
@@ -303,6 +313,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="game.js?v=splitfour-final"></script>
+    <script type="module" src="game.js?v=aidifficulty-final"></script>
   </body>
 </html>

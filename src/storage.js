@@ -1,6 +1,9 @@
 import {
+  AI_DIFFICULTIES,
+  AI_DIFFICULTY_STORAGE_KEY,
   BUILD_STORAGE_KEY,
   CONTROLS_STORAGE_KEY,
+  DEFAULT_AI_DIFFICULTY,
   DEFAULT_LANGUAGE,
   DEFAULT_MATCH_RULE,
   KIT_STORAGE_KEY,
@@ -81,6 +84,15 @@ export function initialMatchRule(matchRules) {
 
 export function saveMatchRule(matchRule) {
   writeStorage(MATCH_RULE_STORAGE_KEY, matchRule);
+}
+
+export function initialAiDifficulty() {
+  const saved = readStorage(AI_DIFFICULTY_STORAGE_KEY);
+  return AI_DIFFICULTIES[saved] ? saved : DEFAULT_AI_DIFFICULTY;
+}
+
+export function saveAiDifficulty(aiDifficulty) {
+  writeStorage(AI_DIFFICULTY_STORAGE_KEY, aiDifficulty);
 }
 
 export function initialKit() {

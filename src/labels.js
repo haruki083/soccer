@@ -30,6 +30,10 @@ export function matchRuleLabel(tr, ruleId) {
   return tr(`matchRules.${ruleId}`);
 }
 
+export function aiDifficultyLabel(tr, difficultyId) {
+  return tr(`aiDifficulties.${difficultyId}`);
+}
+
 export function kitLabel(tr, kitId) {
   return tr(`kits.${kitId}`);
 }

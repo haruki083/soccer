@@ -1,5 +1,6 @@
 import * as THREE from "./vendor/three.module.js";
 import {
+  AI_DIFFICULTIES,
   DEFAULT_LANGUAGE,
   DEFAULT_MATCH_RULE,
   MATCH_RULES,
@@ -71,6 +72,7 @@ import {
   itemCharges as getItemCharges,
   itemIcon as getItemIcon,
   itemName as getItemName,
+  aiDifficultyLabel as getAiDifficultyLabel,
   kitLabel as getKitLabel,
   matchRuleLabel as getMatchRuleLabel,
   tacticLabel as getTacticLabel,
@@ -150,6 +152,7 @@ import {
 } from "./src/stats.js";
 import {
   initialControlBindings,
+  initialAiDifficulty,
   initialKit,
   initialLanguage,
   initialMatchRule,
@@ -158,6 +161,7 @@ import {
   initialPlayerStats,
   initialTeamSettings,
   saveControlBindings as persistControlBindings,
+  saveAiDifficulty as persistAiDifficulty,
   saveKit as persistKit,
   saveLanguage,
   saveMatchRule as persistMatchRule,
@@ -232,6 +236,7 @@ import {
   const buildTotal = document.getElementById("buildTotal");
   const tacticButtons = document.getElementById("tacticButtons");
   const matchRuleButtons = document.getElementById("matchRuleButtons");
+  const aiDifficultyButtons = document.getElementById("aiDifficultyButtons");
   const kitButtons = document.getElementById("kitButtons");
   const aceName = document.getElementById("aceName");
   const styleName = document.getElementById("styleName");
@@ -461,7 +466,7 @@ import {
 
   THREE.ColorManagement.enabled = true;
 
-  const APP_VERSION = "splitfour-final";
+  const APP_VERSION = "aidifficulty-final";
   const WORLD_SCALE = 0.1;
   const FIELD_WORLD = {
     width: FIELD.width * WORLD_SCALE,
@@ -540,6 +545,10 @@ import {
     return getMatchRuleLabel(tr, ruleId);
   }
 
+  function aiDifficultyLabel(difficultyId) {
+    return getAiDifficultyLabel(tr, difficultyId);
+  }
+
   function kitLabel(kitId) {
     return getKitLabel(tr, kitId);
   }
@@ -550,6 +559,10 @@ import {
 
   function saveMatchRule() {
     persistMatchRule(state.matchRule);
+  }
+
+  function saveAiDifficulty() {
+    persistAiDifficulty(state.aiDifficulty);
   }
 
   function saveKit() {
@@ -589,6 +602,9 @@ import {
     for (const button of matchRuleButtons.querySelectorAll("button[data-match-rule]")) {
       button.textContent = matchRuleLabel(button.dataset.matchRule);
     }
+    for (const button of aiDifficultyButtons.querySelectorAll("button[data-ai-difficulty]")) {
+      button.textContent = aiDifficultyLabel(button.dataset.aiDifficulty);
+    }
     for (const button of kitButtons.querySelectorAll("button[data-kit]")) {
       button.textContent = kitLabel(button.dataset.kit);
     }
@@ -596,6 +612,7 @@ import {
     setActiveButton(languageButtons, "language", state.language);
     setActiveButton(tacticButtons, "tactic", currentTacticSelection());
     setActiveButton(matchRuleButtons, "matchRule", state.matchRule);
+    setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
     setActiveButton(kitButtons, "kit", currentKitSelection());
     renderBuildControls();
     renderControlBindings();
@@ -715,6 +732,7 @@ import {
       role: playerRole(),
       tactic: settings.tactic,
       matchRule: state.matchRule,
+      aiDifficulty: state.aiDifficulty,
       kit: settings.kit,
       language: state.language,
     };
@@ -926,6 +944,7 @@ import {
     controlBindings: initialControlBindings(),
     tactic: "balanced",
     matchRule: initialMatchRule(MATCH_RULES),
+    aiDifficulty: initialAiDifficulty(),
     kit: initialKit(),
     teamSettings: initialTeamSettings(),
   };
@@ -1120,7 +1139,7 @@ import {
     const buildRole = slotEntry ? playerRoleFromSlot(slotEntry) : playerRole();
     const buildTacticalRole = tacticalRoleFor(buildRole);
     const aiProfile = controller === "ai" && teamKey === "away" ? createEnemyAiProfile(slot, base.role) : null;
-    const stats = controller !== "ai" ? playerStatsFromPointBuild(buildPoints) : aiRoleStats(base.role, teamKey, aiProfile);
+    const stats = controller !== "ai" ? playerStatsFromPointBuild(buildPoints) : aiRoleStats(base.role, teamKey, aiProfile, state.aiDifficulty);
     const onlineName = displayNameForOnlineSlot(slotEntry, teamKey, slot);
     const displayName = isHuman
       ? isOnlineActive()
@@ -1287,7 +1306,7 @@ import {
   function applyAiRoleProfile(player, role) {
     player.tacticalRole = role;
     player.role = role;
-    player.stats = aiRoleStats(role, player.teamKey, player.aiProfile);
+    player.stats = aiRoleStats(role, player.teamKey, player.aiProfile, state.aiDifficulty);
     player.radius = playerRadiusFromStats(player.stats, role);
     player.color = aiRoleColor(player.teamKey, role);
   }
@@ -1998,7 +2017,7 @@ import {
         }
       }
       const powerCore = player.powerBoostTimer > 0 ? 1.5 : 1;
-      const powerRatio = clamp(player.stats.power, 0, 1);
+      const powerRatio = clamp(player.stats.power, 0, 1.25);
       const powerDrive = Math.pow(powerRatio, 1.05);
       const powerShove = powerShoveFromStat(powerRatio) * powerCore;
       const sliding = isSliding(player);
@@ -2193,7 +2212,10 @@ import {
   }
 
   function roomSetupSignature() {
-    return getRoomSetupSignature(online, state.teamSettings);
+    return getRoomSetupSignature(online, {
+      teams: state.teamSettings,
+      aiDifficulty: state.aiDifficulty,
+    });
   }
 
   function applyHostSettings(settings) {
@@ -2209,6 +2231,11 @@ import {
     if (MATCH_RULES[settings.matchRule]) {
       state.matchRule = settings.matchRule;
       setActiveButton(matchRuleButtons, "matchRule", state.matchRule);
+    }
+    if (AI_DIFFICULTIES[settings.aiDifficulty]) {
+      state.aiDifficulty = settings.aiDifficulty;
+      saveAiDifficulty();
+      setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
     }
     setActiveButton(tacticButtons, "tactic", currentTacticSelection());
     setActiveButton(kitButtons, "kit", currentKitSelection());
@@ -4277,6 +4304,24 @@ import {
     setActiveButton(matchRuleButtons, "matchRule", state.matchRule);
     setupMatch(true);
     showToast(matchRuleLabel(state.matchRule));
+    sendOnlineProfile(true);
+    updateHud();
+  });
+
+  aiDifficultyButtons.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-ai-difficulty]");
+    if (!button) return;
+    if (!AI_DIFFICULTIES[button.dataset.aiDifficulty]) return;
+    if (isOnlineActive() && !isOnlineHost()) {
+      showToast(tr("toast.hostOnly"));
+      setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
+      return;
+    }
+    state.aiDifficulty = button.dataset.aiDifficulty;
+    saveAiDifficulty();
+    setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
+    setupMatch(true);
+    showToast(aiDifficultyLabel(state.aiDifficulty));
     sendOnlineProfile(true);
     updateHud();
   });

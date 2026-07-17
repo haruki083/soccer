@@ -18,8 +18,10 @@ const staleClientMs = 30_000;
 const rooms = new Map();
 const defaultKit = "crimsonBlue";
 const defaultAwayKit = "skyStripes";
+const defaultAiDifficulty = "ai150";
 const validTactics = new Set(["balanced", "counter", "press"]);
 const validKits = new Set(["crimsonBlue", "blackWhite", "redCenter", "skyStripes", "sash", "redBlack"]);
+const validAiDifficulties = new Set(["ai100", "ai150", "ai200", "ai300"]);
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
@@ -100,6 +102,10 @@ function sanitizeKit(value, fallback = defaultKit) {
   return validKits.has(value) ? value : fallback;
 }
 
+function sanitizeAiDifficulty(value, fallback = defaultAiDifficulty) {
+  return validAiDifficulties.has(value) ? value : fallback;
+}
+
 function sanitizePlayerName(value) {
   return String(value || "")
     .replace(/[\u0000-\u001f\u007f]/g, "")
@@ -138,6 +144,7 @@ function defaultProfile(profile = {}) {
     role: profile.role || "FW",
     tactic: sanitizeTactic(profile.tactic),
     matchRule: profile.matchRule || "time3",
+    aiDifficulty: sanitizeAiDifficulty(profile.aiDifficulty),
     kit: sanitizeKit(profile.kit),
     language: profile.language || "ja",
   };
@@ -166,6 +173,7 @@ function roomSettingsPayload(settings) {
   return {
     tactic: sanitizeTactic(settings?.tactic),
     matchRule: settings?.matchRule || "time3",
+    aiDifficulty: sanitizeAiDifficulty(settings?.aiDifficulty),
     teams: normalizeTeamSettings(settings?.teams),
   };
 }
@@ -224,6 +232,7 @@ function makeRoom(code) {
     settings: {
       tactic: "balanced",
       matchRule: "time3",
+      aiDifficulty: defaultAiDifficulty,
       teams: normalizeTeamSettings(),
     },
     createdAt: Date.now(),
@@ -253,6 +262,10 @@ function assignClient(room, clientId, profile) {
     client.connected = true;
     client.lastSeen = Date.now();
     clearTimeout(client.removeTimer);
+    if (client.clientId === room.hostId) {
+      room.settings.matchRule = client.profile.matchRule || room.settings.matchRule;
+      room.settings.aiDifficulty = client.profile.aiDifficulty || room.settings.aiDifficulty;
+    }
     return client;
   }
 
@@ -274,6 +287,7 @@ function assignClient(room, clientId, profile) {
   if (!room.hostId) {
     room.hostId = id;
     room.settings.matchRule = client.profile.matchRule;
+    room.settings.aiDifficulty = client.profile.aiDifficulty;
   }
   return client;
 }
@@ -288,6 +302,7 @@ function selectHost(room) {
   room.hostId = nextHost?.clientId || null;
   if (nextHost) {
     room.settings.matchRule = nextHost.profile.matchRule || room.settings.matchRule;
+    room.settings.aiDifficulty = nextHost.profile.aiDifficulty || room.settings.aiDifficulty;
   }
 }
 
@@ -487,6 +502,7 @@ const server = createServer(async (req, res) => {
       client.lastSeen = Date.now();
       if (client.clientId === room.hostId) {
         room.settings.matchRule = client.profile.matchRule || room.settings.matchRule;
+        room.settings.aiDifficulty = client.profile.aiDifficulty || room.settings.aiDifficulty;
       }
       broadcastRoom(room);
       json(res, 200, { room: roomPayload(room) });

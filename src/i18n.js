@@ -31,6 +31,7 @@ export const I18N = {
       formation: "FORMATION",
       item: "ITEM",
       joinRoom: "JOIN ROOM",
+      aiDifficulty: "AI LEVEL",
       kit: "BODY COLOR",
       leaveRoom: "LEAVE",
       lobby: "LOBBY",
@@ -144,6 +145,12 @@ export const I18N = {
       first5: "FIRST TO 5",
       first7: "FIRST TO 7",
     },
+    aiDifficulties: {
+      ai100: "TOTAL 100",
+      ai150: "TOTAL 150",
+      ai200: "TOTAL 200",
+      ai300: "TOTAL 300",
+    },
     kits: {
       crimsonBlue: "CRIMSON BODY",
       blackWhite: "INK BODY",
@@ -248,6 +255,7 @@ export const I18N = {
       formation: "フォーメーション",
       item: "アイテム",
       joinRoom: "参加",
+      aiDifficulty: "AI難易度",
       kit: "ボディカラー",
       leaveRoom: "退出",
       lobby: "ロビー",
@@ -360,6 +368,12 @@ export const I18N = {
       first3: "3点先取",
       first5: "5点先取",
       first7: "7点先取",
+    },
+    aiDifficulties: {
+      ai100: "合計100",
+      ai150: "合計150",
+      ai200: "合計200",
+      ai300: "合計300",
     },
     kits: {
       crimsonBlue: "クリムゾン",
