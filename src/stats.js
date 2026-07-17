@@ -18,11 +18,11 @@ const PHYSICAL_RESISTANCE_CURVE = [
 ];
 
 const POWER_SHOVE_CURVE = [
-  { stat: 20, shove: 800 },
-  { stat: 40, shove: 1120 },
-  { stat: 50, shove: 1290 },
-  { stat: 70, shove: 1500 },
-  { stat: 90, shove: 2000 },
+  { stat: 20, shove: 760 },
+  { stat: 40, shove: 1080 },
+  { stat: 50, shove: 1300 },
+  { stat: 70, shove: 1680 },
+  { stat: 90, shove: 2250 },
 ];
 
 function clamp(value, min, max) {

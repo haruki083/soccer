@@ -2014,16 +2014,16 @@ import {
         overlap * 8;
       if (sliding) {
         shove +=
-          (slideFreshHit ? 330 : 95) +
-          powerDrive * 220;
+          (slideFreshHit ? 280 : 80) +
+          powerDrive * 320;
         if (slideFreshHit) {
           addImpactEffect("slide", ball.x, ball.y, { color: "#ffffff", radius: 1.08, ttl: 0.34, height: 0.16 });
           player.slideHitBall = true;
         }
       }
       const contactMix = sliding
-        ? clamp(0.6 + powerDrive * 0.22, 0, 0.96)
-        : clamp(ballSpeed > 760 ? 0.22 + powerDrive * 0.3 : 0.42 + powerDrive * 0.36, 0, 0.9);
+        ? clamp(0.54 + powerDrive * 0.32, 0, 0.98)
+        : clamp(ballSpeed > 760 ? 0.18 + powerDrive * 0.4 : 0.34 + powerDrive * 0.5, 0, 0.92);
       ball.vx = lerp(ball.vx, impulseX * shove, contactMix);
       ball.vy = lerp(ball.vy, impulseY * shove, contactMix);
       ball.carrier = null;
