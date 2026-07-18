@@ -152,8 +152,8 @@ function defaultProfile(profile = {}) {
 
 function defaultTeamSettings(teamKey) {
   return teamKey === "away"
-    ? { tactic: "counter", kit: defaultAwayKit }
-    : { tactic: "balanced", kit: defaultKit };
+    ? { tactic: "counter", kit: defaultAwayKit, aiDifficulty: defaultAiDifficulty }
+    : { tactic: "balanced", kit: defaultKit, aiDifficulty: defaultAiDifficulty };
 }
 
 function normalizeTeamSettings(settings = {}) {
@@ -161,10 +161,12 @@ function normalizeTeamSettings(settings = {}) {
     home: {
       tactic: sanitizeTactic(settings.home?.tactic, "balanced"),
       kit: sanitizeKit(settings.home?.kit, defaultKit),
+      aiDifficulty: sanitizeAiDifficulty(settings.home?.aiDifficulty),
     },
     away: {
       tactic: sanitizeTactic(settings.away?.tactic, "counter"),
       kit: sanitizeKit(settings.away?.kit, defaultAwayKit),
+      aiDifficulty: sanitizeAiDifficulty(settings.away?.aiDifficulty),
     },
   };
 }
@@ -221,6 +223,7 @@ function updateTeamSettingsFromClient(room, client) {
   room.settings.teams[teamKey] = {
     tactic: sanitizeTactic(client.profile.tactic, current.tactic || fallback.tactic),
     kit: sanitizeKit(client.profile.kit, current.kit || fallback.kit),
+    aiDifficulty: sanitizeAiDifficulty(client.profile.aiDifficulty, current.aiDifficulty || fallback.aiDifficulty),
   };
 }
 

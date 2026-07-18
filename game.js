@@ -152,7 +152,6 @@ import {
 } from "./src/stats.js";
 import {
   initialControlBindings,
-  initialAiDifficulty,
   initialKit,
   initialLanguage,
   initialMatchRule,
@@ -161,16 +160,17 @@ import {
   initialPlayerStats,
   initialTeamSettings,
   saveControlBindings as persistControlBindings,
-  saveAiDifficulty as persistAiDifficulty,
   saveKit as persistKit,
   saveLanguage,
   saveMatchRule as persistMatchRule,
   saveOnlineTeam as persistOnlineTeam,
   savePlayerName as persistPlayerName,
   savePlayerStats as persistPlayerStats,
+  saveTeamAiDifficulties as persistTeamAiDifficulties,
 } from "./src/storage.js";
 import {
   defaultTeamSetting,
+  normalizeAiDifficultyId,
   normalizeKitId,
   normalizeTacticId,
   normalizeTeamSettings,
@@ -236,7 +236,8 @@ import {
   const buildTotal = document.getElementById("buildTotal");
   const tacticButtons = document.getElementById("tacticButtons");
   const matchRuleButtons = document.getElementById("matchRuleButtons");
-  const aiDifficultyButtons = document.getElementById("aiDifficultyButtons");
+  const homeAiDifficultyButtons = document.getElementById("homeAiDifficultyButtons");
+  const awayAiDifficultyButtons = document.getElementById("awayAiDifficultyButtons");
   const kitButtons = document.getElementById("kitButtons");
   const aceName = document.getElementById("aceName");
   const styleName = document.getElementById("styleName");
@@ -466,7 +467,7 @@ import {
 
   THREE.ColorManagement.enabled = true;
 
-  const APP_VERSION = "aidifficulty-final";
+  const APP_VERSION = "teamai-final";
   const WORLD_SCALE = 0.1;
   const FIELD_WORLD = {
     width: FIELD.width * WORLD_SCALE,
@@ -549,6 +550,13 @@ import {
     return getAiDifficultyLabel(tr, difficultyId);
   }
 
+  function aiDifficultyButtonGroups() {
+    return [
+      { teamKey: "home", element: homeAiDifficultyButtons },
+      { teamKey: "away", element: awayAiDifficultyButtons },
+    ].filter((group) => group.element);
+  }
+
   function kitLabel(kitId) {
     return getKitLabel(tr, kitId);
   }
@@ -561,8 +569,8 @@ import {
     persistMatchRule(state.matchRule);
   }
 
-  function saveAiDifficulty() {
-    persistAiDifficulty(state.aiDifficulty);
+  function saveTeamAiDifficulties() {
+    persistTeamAiDifficulties(state.teamSettings);
   }
 
   function saveKit() {
@@ -602,8 +610,10 @@ import {
     for (const button of matchRuleButtons.querySelectorAll("button[data-match-rule]")) {
       button.textContent = matchRuleLabel(button.dataset.matchRule);
     }
-    for (const button of aiDifficultyButtons.querySelectorAll("button[data-ai-difficulty]")) {
-      button.textContent = aiDifficultyLabel(button.dataset.aiDifficulty);
+    for (const group of aiDifficultyButtonGroups()) {
+      for (const button of group.element.querySelectorAll("button[data-ai-difficulty]")) {
+        button.textContent = aiDifficultyLabel(button.dataset.aiDifficulty);
+      }
     }
     for (const button of kitButtons.querySelectorAll("button[data-kit]")) {
       button.textContent = kitLabel(button.dataset.kit);
@@ -612,7 +622,7 @@ import {
     setActiveButton(languageButtons, "language", state.language);
     setActiveButton(tacticButtons, "tactic", currentTacticSelection());
     setActiveButton(matchRuleButtons, "matchRule", state.matchRule);
-    setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
+    updateAiDifficultyButtons();
     setActiveButton(kitButtons, "kit", currentKitSelection());
     renderBuildControls();
     renderControlBindings();
@@ -724,7 +734,9 @@ import {
 
   function onlineProfile() {
     const profileTeam = normalizeOnlineTeam(state.onlineTeamPreference);
-    const settings = isOnlineActive() ? teamSetting(profileTeam) : { tactic: state.tactic, kit: state.kit };
+    const settings = isOnlineActive()
+      ? teamSetting(profileTeam)
+      : { tactic: state.tactic, kit: state.kit, aiDifficulty: teamAiDifficultyId(profileTeam) };
     return {
       name: localPlayerName(),
       teamPreference: state.onlineTeamPreference,
@@ -732,7 +744,7 @@ import {
       role: playerRole(),
       tactic: settings.tactic,
       matchRule: state.matchRule,
-      aiDifficulty: state.aiDifficulty,
+      aiDifficulty: settings.aiDifficulty,
       kit: settings.kit,
       language: state.language,
     };
@@ -792,6 +804,33 @@ import {
       ...teamSetting(key),
       kit: normalizeKitId(kitId, defaultTeamSetting(key).kit),
     };
+  }
+
+  function setTeamAiDifficulty(teamKey, aiDifficulty) {
+    const key = normalizeOnlineTeam(teamKey);
+    state.teamSettings[key] = {
+      ...teamSetting(key),
+      aiDifficulty: normalizeAiDifficultyId(aiDifficulty, defaultTeamSetting(key).aiDifficulty),
+    };
+    saveTeamAiDifficulties();
+  }
+
+  function teamAiDifficultyId(teamKey) {
+    return teamSetting(teamKey).aiDifficulty;
+  }
+
+  function canEditTeamAiDifficulty(teamKey) {
+    return !isOnlineActive() || selectedOnlineTeam() === normalizeOnlineTeam(teamKey);
+  }
+
+  function updateAiDifficultyButtons() {
+    for (const group of aiDifficultyButtonGroups()) {
+      setActiveButton(group.element, "aiDifficulty", teamAiDifficultyId(group.teamKey));
+      const locked = isOnlineActive() && !canEditTeamAiDifficulty(group.teamKey);
+      for (const button of group.element.querySelectorAll("button[data-ai-difficulty]")) {
+        button.disabled = locked;
+      }
+    }
   }
 
   function teamTacticId(teamKey) {
@@ -908,6 +947,7 @@ import {
     state.onlineTeamPreference = nextTeam;
     saveOnlineTeam();
     renderOnlineTeamButtons();
+    updateAiDifficultyButtons();
     if (isOnlineActive()) {
       sendOnlineProfile(true);
       showToast(`${onlineTeamLabel(nextTeam)} ${tr("toast.teamChanged")}`);
@@ -944,7 +984,6 @@ import {
     controlBindings: initialControlBindings(),
     tactic: "balanced",
     matchRule: initialMatchRule(MATCH_RULES),
-    aiDifficulty: initialAiDifficulty(),
     kit: initialKit(),
     teamSettings: initialTeamSettings(),
   };
@@ -1139,7 +1178,7 @@ import {
     const buildRole = slotEntry ? playerRoleFromSlot(slotEntry) : playerRole();
     const buildTacticalRole = tacticalRoleFor(buildRole);
     const aiProfile = controller === "ai" && teamKey === "away" ? createEnemyAiProfile(slot, base.role) : null;
-    const stats = controller !== "ai" ? playerStatsFromPointBuild(buildPoints) : aiRoleStats(base.role, teamKey, aiProfile, state.aiDifficulty);
+    const stats = controller !== "ai" ? playerStatsFromPointBuild(buildPoints) : aiRoleStats(base.role, teamKey, aiProfile, teamAiDifficultyId(teamKey));
     const onlineName = displayNameForOnlineSlot(slotEntry, teamKey, slot);
     const displayName = isHuman
       ? isOnlineActive()
@@ -1306,7 +1345,7 @@ import {
   function applyAiRoleProfile(player, role) {
     player.tacticalRole = role;
     player.role = role;
-    player.stats = aiRoleStats(role, player.teamKey, player.aiProfile, state.aiDifficulty);
+    player.stats = aiRoleStats(role, player.teamKey, player.aiProfile, teamAiDifficultyId(player.teamKey));
     player.radius = playerRadiusFromStats(player.stats, role);
     player.color = aiRoleColor(player.teamKey, role);
   }
@@ -2212,17 +2251,15 @@ import {
   }
 
   function roomSetupSignature() {
-    return getRoomSetupSignature(online, {
-      teams: state.teamSettings,
-      aiDifficulty: state.aiDifficulty,
-    });
+    return getRoomSetupSignature(online, state.teamSettings);
   }
 
   function applyHostSettings(settings) {
     if (!settings) return;
+    const legacyAiDifficulty = AI_DIFFICULTIES[settings.aiDifficulty] ? settings.aiDifficulty : null;
     const incomingTeams = settings.teams || {
-      home: { ...teamSetting("home"), tactic: settings.tactic },
-      away: teamSetting("away"),
+      home: { ...teamSetting("home"), tactic: settings.tactic, aiDifficulty: legacyAiDifficulty || teamAiDifficultyId("home") },
+      away: { ...teamSetting("away"), aiDifficulty: legacyAiDifficulty || teamAiDifficultyId("away") },
     };
     state.teamSettings = normalizeTeamSettings({
       home: { ...teamSetting("home"), ...(incomingTeams.home || {}) },
@@ -2232,11 +2269,8 @@ import {
       state.matchRule = settings.matchRule;
       setActiveButton(matchRuleButtons, "matchRule", state.matchRule);
     }
-    if (AI_DIFFICULTIES[settings.aiDifficulty]) {
-      state.aiDifficulty = settings.aiDifficulty;
-      saveAiDifficulty();
-      setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
-    }
+    saveTeamAiDifficulties();
+    updateAiDifficultyButtons();
     setActiveButton(tacticButtons, "tactic", currentTacticSelection());
     setActiveButton(kitButtons, "kit", currentKitSelection());
   }
@@ -2311,6 +2345,7 @@ import {
       roomLinkInput.placeholder = view.roomLinkPlaceholder;
     }
     renderOnlineTeamButtons();
+    updateAiDifficultyButtons();
     renderOnlinePlayers();
   }
 
@@ -4308,23 +4343,26 @@ import {
     updateHud();
   });
 
-  aiDifficultyButtons.addEventListener("click", (event) => {
-    const button = event.target.closest("button[data-ai-difficulty]");
-    if (!button) return;
-    if (!AI_DIFFICULTIES[button.dataset.aiDifficulty]) return;
-    if (isOnlineActive() && !isOnlineHost()) {
-      showToast(tr("toast.hostOnly"));
-      setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
-      return;
-    }
-    state.aiDifficulty = button.dataset.aiDifficulty;
-    saveAiDifficulty();
-    setActiveButton(aiDifficultyButtons, "aiDifficulty", state.aiDifficulty);
-    setupMatch(true);
-    showToast(aiDifficultyLabel(state.aiDifficulty));
-    sendOnlineProfile(true);
-    updateHud();
-  });
+  for (const group of aiDifficultyButtonGroups()) {
+    group.element.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-ai-difficulty]");
+      if (!button) return;
+      if (!AI_DIFFICULTIES[button.dataset.aiDifficulty]) return;
+      const teamKey = normalizeOnlineTeam(group.element.dataset.aiDifficultyTeam || group.teamKey);
+      if (!canEditTeamAiDifficulty(teamKey)) {
+        showToast(tr("toast.teamOnly"));
+        updateAiDifficultyButtons();
+        return;
+      }
+      setTeamAiDifficulty(teamKey, button.dataset.aiDifficulty);
+      updateAiTacticalRoles(teamPlan("home"), teamPlan("away"));
+      updateAiDifficultyButtons();
+      setupMatch(true);
+      showToast(`${onlineTeamLabel(teamKey)} ${aiDifficultyLabel(teamAiDifficultyId(teamKey))}`);
+      sendOnlineProfile(true);
+      updateHud();
+    });
+  }
 
   kitButtons.addEventListener("click", (event) => {
     const button = event.target.closest("button[data-kit]");

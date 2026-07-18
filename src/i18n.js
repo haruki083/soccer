@@ -32,6 +32,8 @@ export const I18N = {
       item: "ITEM",
       joinRoom: "JOIN ROOM",
       aiDifficulty: "AI LEVEL",
+      homeAiDifficulty: "HOME AI",
+      awayAiDifficulty: "AWAY AI",
       kit: "BODY COLOR",
       leaveRoom: "LEAVE",
       lobby: "LOBBY",
@@ -198,6 +200,7 @@ export const I18N = {
       stunned: "STUNNED",
       teamChanged: "TEAM CHANGED",
       teamFull: "TEAM FULL",
+      teamOnly: "YOUR TEAM ONLY",
     },
     event: {
       awayGoal: "RIVALS GOAL",
@@ -256,6 +259,8 @@ export const I18N = {
       item: "アイテム",
       joinRoom: "参加",
       aiDifficulty: "AI難易度",
+      homeAiDifficulty: "HOME AI",
+      awayAiDifficulty: "AWAY AI",
       kit: "ボディカラー",
       leaveRoom: "退出",
       lobby: "ロビー",
@@ -422,6 +427,7 @@ export const I18N = {
       stunned: "スタン中",
       teamChanged: "チーム変更",
       teamFull: "チーム満員",
+      teamOnly: "自分のチームだけ変更できます",
     },
     event: {
       awayGoal: "ライバルズ ゴール",

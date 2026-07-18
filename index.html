@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>4v4 Character Football Prototype</title>
-    <link rel="stylesheet" href="styles.css?v=aidifficulty-final">
+    <link rel="stylesheet" href="styles.css?v=teamai-final">
   </head>
   <body>
     <main class="app-shell">
@@ -201,7 +201,15 @@
 
           <section class="panel-section">
             <div class="panel-title" data-i18n="ui.aiDifficulty">AI LEVEL</div>
-            <div class="segmented vertical" id="aiDifficultyButtons">
+            <div class="panel-subtitle" data-i18n="ui.homeAiDifficulty">HOME AI</div>
+            <div class="segmented vertical" id="homeAiDifficultyButtons" data-ai-difficulty-team="home">
+              <button data-ai-difficulty="ai100">TOTAL 100</button>
+              <button class="is-active" data-ai-difficulty="ai150">TOTAL 150</button>
+              <button data-ai-difficulty="ai200">TOTAL 200</button>
+              <button data-ai-difficulty="ai300">TOTAL 300</button>
+            </div>
+            <div class="panel-subtitle" data-i18n="ui.awayAiDifficulty">AWAY AI</div>
+            <div class="segmented vertical" id="awayAiDifficultyButtons" data-ai-difficulty-team="away">
               <button data-ai-difficulty="ai100">TOTAL 100</button>
               <button class="is-active" data-ai-difficulty="ai150">TOTAL 150</button>
               <button data-ai-difficulty="ai200">TOTAL 200</button>
@@ -313,6 +321,6 @@
         </div>
       </section>
     </main>
-    <script type="module" src="game.js?v=aidifficulty-final"></script>
+    <script type="module" src="game.js?v=teamai-final"></script>
   </body>
 </html>

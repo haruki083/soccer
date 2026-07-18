@@ -8,6 +8,7 @@ export const CONTROLS_STORAGE_KEY = "soccerControlBindings";
 export const KIT_STORAGE_KEY = "soccerKit";
 export const MATCH_RULE_STORAGE_KEY = "soccerMatchRule";
 export const AI_DIFFICULTY_STORAGE_KEY = "soccerAiDifficulty";
+export const TEAM_AI_DIFFICULTY_STORAGE_KEY = "soccerTeamAiDifficulty";
 export const ONLINE_CLIENT_STORAGE_KEY = "soccerOnlineClientId";
 
 export const ONLINE_ROOM_PARAM = "room";

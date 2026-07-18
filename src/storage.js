@@ -11,6 +11,7 @@ import {
   MATCH_RULE_STORAGE_KEY,
   ONLINE_TEAM_STORAGE_KEY,
   PLAYER_NAME_STORAGE_KEY,
+  TEAM_AI_DIFFICULTY_STORAGE_KEY,
 } from "./appConfig.js";
 import { DEFAULT_KIT, KIT_STYLES } from "./config.js";
 import { DEFAULT_CONTROL_BINDINGS, normalizeControlBindings } from "./controls.js";
@@ -95,6 +96,16 @@ export function saveAiDifficulty(aiDifficulty) {
   writeStorage(AI_DIFFICULTY_STORAGE_KEY, aiDifficulty);
 }
 
+export function saveTeamAiDifficulties(teamSettings) {
+  writeStorage(
+    TEAM_AI_DIFFICULTY_STORAGE_KEY,
+    JSON.stringify({
+      home: teamSettings?.home?.aiDifficulty,
+      away: teamSettings?.away?.aiDifficulty,
+    }),
+  );
+}
+
 export function initialKit() {
   const saved = readStorage(KIT_STORAGE_KEY);
   return KIT_STYLES[saved] ? saved : DEFAULT_KIT;
@@ -105,9 +116,11 @@ export function saveKit(kitId) {
 }
 
 export function initialTeamSettings() {
+  const savedAiDifficulties = readJsonStorage(TEAM_AI_DIFFICULTY_STORAGE_KEY) || {};
+  const legacyAiDifficulty = initialAiDifficulty();
   return normalizeTeamSettings({
-    home: { tactic: "balanced", kit: initialKit() },
-    away: defaultTeamSetting("away"),
+    home: { tactic: "balanced", kit: initialKit(), aiDifficulty: savedAiDifficulties.home || legacyAiDifficulty },
+    away: { ...defaultTeamSetting("away"), aiDifficulty: savedAiDifficulties.away || legacyAiDifficulty },
   });
 }
 

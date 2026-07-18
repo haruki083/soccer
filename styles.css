@@ -656,6 +656,14 @@ svg {
   letter-spacing: 0;
 }
 
+.panel-subtitle {
+  margin-top: 10px;
+  color: var(--text);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
 .panel-heading {
   display: flex;
   align-items: center;
