@@ -467,7 +467,7 @@ import {
 
   THREE.ColorManagement.enabled = true;
 
-  const APP_VERSION = "teamai-final";
+  const APP_VERSION = "ailabels-final";
   const WORLD_SCALE = 0.1;
   const FIELD_WORLD = {
     width: FIELD.width * WORLD_SCALE,

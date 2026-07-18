@@ -148,10 +148,10 @@ export const I18N = {
       first7: "FIRST TO 7",
     },
     aiDifficulties: {
-      ai100: "TOTAL 100",
-      ai150: "TOTAL 150",
-      ai200: "TOTAL 200",
-      ai300: "TOTAL 300",
+      ai100: "BEGINNER",
+      ai150: "STANDARD",
+      ai200: "ADVANCED",
+      ai300: "NIGHTMARE",
     },
     kits: {
       crimsonBlue: "CRIMSON BODY",
@@ -375,10 +375,10 @@ export const I18N = {
       first7: "7点先取",
     },
     aiDifficulties: {
-      ai100: "合計100",
-      ai150: "合計150",
-      ai200: "合計200",
-      ai300: "合計300",
+      ai100: "やさしい",
+      ai150: "ふつう",
+      ai200: "つよい",
+      ai300: "最強",
     },
     kits: {
       crimsonBlue: "クリムゾン",
